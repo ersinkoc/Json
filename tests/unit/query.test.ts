@@ -105,8 +105,19 @@ describe('query plugin', () => {
       expect(json.has(data, 'arr[10]')).toBe(false);
     });
 
+    it('should return false for non-numeric array index with bracket notation', () => {
+      // Array index must be numeric - bracket notation with string returns false
+      expect(json.has({ arr: [1, 2, 3] }, 'arr["abc"]')).toBe(false);
+    });
+
     it('should return true for null values', () => {
       expect(json.has({ a: null }, 'a')).toBe(true);
+    });
+
+    it('should return false for path through primitive value', () => {
+      expect(json.has({ a: 1 }, 'a.b')).toBe(false);
+      expect(json.has({ a: 'string' }, 'a[0]')).toBe(false);
+      expect(json.has({ a: true }, 'a.x')).toBe(false);
     });
   });
 

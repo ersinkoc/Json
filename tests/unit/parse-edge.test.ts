@@ -94,4 +94,27 @@ describe('parse edge cases', () => {
   it('should throw on Infinity', () => {
     expect(() => json.parse('Infinity')).toThrow();
   });
+
+  it('should throw on invalid number format', () => {
+    // Invalid number like just digits with invalid chars
+    expect(() => json.parse('123abc')).toThrow();
+  });
+
+  it('should throw on malformed true', () => {
+    expect(() => json.parse('tru')).toThrow();
+    expect(() => json.parse('treu')).toThrow();
+    expect(() => json.parse('trXe')).toThrow();
+  });
+
+  it('should throw on malformed false', () => {
+    expect(() => json.parse('fals')).toThrow();
+    expect(() => json.parse('fasle')).toThrow();
+    expect(() => json.parse('falXe')).toThrow();
+  });
+
+  it('should throw on malformed null', () => {
+    expect(() => json.parse('nul')).toThrow();
+    expect(() => json.parse('nlll')).toThrow();
+    expect(() => json.parse('nuXl')).toThrow();
+  });
 });

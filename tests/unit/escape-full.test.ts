@@ -44,6 +44,12 @@ describe('escape - full coverage', () => {
       expect(escapeString('hello world')).toBe('hello world');
     });
 
+    it('should handle surrogate pairs (emoji) correctly', () => {
+      // Emoji should be encoded as single character, not escaped
+      expect(escapeString('😀')).toBe('😀');
+      expect(escapeString('Hello 😀 World')).toBe('Hello 😀 World');
+    });
+
     it('should escape forward slash', () => {
       expect(escapeString('path/to/file')).toBe('path\\/to\\/file');
     });
@@ -82,6 +88,13 @@ describe('escape - full coverage', () => {
       expect(unescapeString('\\u0041')).toBe('A');
       expect(unescapeString('\\u0030')).toBe('0');
       expect(unescapeString('\\uD83D\\uDE00')).toBe('😀');
+    });
+
+    it('should handle unknown escape sequences', () => {
+      // Unknown escape after backslash - just return the char
+      expect(unescapeString('\\k')).toBe('k');
+      expect(unescapeString('\\x')).toBe('x');
+      expect(unescapeString('\\z')).toBe('z');
     });
 
     it('should handle empty string', () => {

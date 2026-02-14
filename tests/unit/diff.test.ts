@@ -8,6 +8,14 @@ describe('diff and patch plugins', () => {
   });
 
   describe('diff', () => {
+    it('should apply replace operation on array', () => {
+      const obj = { arr: [1, 2, 3] };
+      const operations = [{ op: 'replace' as const, path: '/arr/1', value: 20 }];
+      const result = json.patch(obj, operations);
+
+      expect(result).toEqual({ arr: [1, 20, 3] });
+    });
+
     it('should detect added property', () => {
       const before = { a: 1 };
       const after = { a: 1, b: 2 };
@@ -189,6 +197,38 @@ describe('diff and patch plugins', () => {
       const result = json.patch(obj, operations);
 
       expect(result).toEqual({ a: 1 });
+    });
+
+    it('should apply remove operation on array', () => {
+      const obj = { arr: [1, 2, 3] };
+      const operations = [{ op: 'remove' as const, path: '/arr/1' }];
+      const result = json.patch(obj, operations);
+
+      expect(result).toEqual({ arr: [1, 3] });
+    });
+
+    it('should apply remove operation on nested array', () => {
+      const obj = { matrix: [[1, 2], [3, 4]] };
+      const operations = [{ op: 'remove' as const, path: '/matrix/0/1' }];
+      const result = json.patch(obj, operations);
+
+      expect(result).toEqual({ matrix: [[1], [3, 4]] });
+    });
+
+    it('should handle empty path in remove operation', () => {
+      const obj = { a: 1 };
+      const operations = [{ op: 'remove' as const, path: '' }];
+      const result = json.patch(obj, operations);
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should handle root path in remove operation', () => {
+      const obj = { a: 1 };
+      const operations = [{ op: 'remove' as const, path: '/' }];
+      const result = json.patch(obj, operations);
+
+      expect(result).toBeUndefined();
     });
 
     it('should apply replace operation', () => {

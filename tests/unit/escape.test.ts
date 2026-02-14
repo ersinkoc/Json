@@ -94,7 +94,8 @@ describe('escape', () => {
     it('should handle surrogate pairs (emoji)', () => {
       // Smiling face emoji (U+1F600) = D83D DE00
       expect(unescapeString('\\uD83D\\uDE00')).toBe('😀');
-      expect(unescapeString('\\uD83D')).toBe('\\uD83D'); // Unpaired high surrogate (escape adds backslash)
+      // Unpaired high surrogate returns as character
+      expect(unescapeString('\\uD83D')).toBe('\uD83D');
     });
 
     it('should handle unpaired high surrogate', () => {

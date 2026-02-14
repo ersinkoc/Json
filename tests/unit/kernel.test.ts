@@ -147,6 +147,24 @@ describe('JsonKernelImpl', () => {
       expect(onError).toHaveBeenCalled();
     });
 
+    it('should handle plugin install error with non-Error object', () => {
+      const onError = vi.fn();
+      const plugin: JsonPlugin = {
+        name: 'error-plugin',
+        version: '1.0.0',
+        install: () => {
+          throw 'string error'; // Non-Error object
+        },
+        onError,
+      };
+
+      expect(() => kernel.use(plugin)).toThrow('Failed to load plugin');
+      expect(onError).toHaveBeenCalled();
+      const errorArg = onError.mock.calls[0][0];
+      expect(errorArg).toBeInstanceOf(Error);
+      expect(errorArg.message).toBe('string error');
+    });
+
     it('should unload a plugin', () => {
       const plugin: JsonPlugin = {
         name: 'test-plugin',

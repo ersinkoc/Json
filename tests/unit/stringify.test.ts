@@ -156,6 +156,13 @@ describe('stringify', () => {
       const result = json.stringify(obj, { circular: '[Circular]' });
       expect(result).toContain('"self":"[Circular]"');
     });
+
+    it('should handle circular reference in array with circular option', () => {
+      const arr: unknown[] = [1, 2];
+      arr.push(arr);
+      const result = json.stringify(arr, { circular: '[Circular]' });
+      expect(result).toContain('[Circular]');
+    });
   });
 
   describe('replacer option', () => {
@@ -212,6 +219,16 @@ describe('stringify', () => {
         },
       });
       expect(calledWithEmpty).toBe(true);
+    });
+
+    it('should call replacer for array indices', () => {
+      const result = json.stringify([1, 2, 3], {
+        replacer: (key, value) => {
+          if (key === '1') return 20;
+          return value as number;
+        },
+      });
+      expect(result).toBe('[1,20,3]');
     });
 
     it('should handle replacer returning undefined', () => {

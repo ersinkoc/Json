@@ -49,6 +49,11 @@ describe('immutable plugin', () => {
   });
 
   describe('immutableSet', () => {
+    it('should handle empty path', () => {
+      const result = json.immutableSet({ a: 1 }, '', 'new value');
+      expect(result).toBe('new value');
+    });
+
     it('should set value immutably', () => {
       const obj = { a: 1 };
       const result = json.immutableSet(obj, 'b', 2);
@@ -78,6 +83,12 @@ describe('immutable plugin', () => {
       const result = json.immutableSet(obj, 'a.b.c', 1);
 
       expect(result).toEqual({ a: { b: { c: 1 } } });
+    });
+
+    it('should handle setting property on null/undefined value', () => {
+      const obj = { a: null };
+      const result = json.immutableSet(obj, 'a.b', 2);
+      expect(result).toEqual({ a: { b: 2 } });
     });
 
     it('should maintain structural sharing', () => {
