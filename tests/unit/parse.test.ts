@@ -180,4 +180,59 @@ describe('reviver', () => {
 
     expect(result.date).toBeInstanceOf(Date);
   });
+
+  it('should apply reviver to nested objects', () => {
+    const result = json.parse('{"a":{"b":{"c":1}}}', {
+      reviver: (key, value) => {
+        if (key === 'c') {
+          return value + 100;
+        }
+        return value;
+      },
+    });
+
+    expect(result).toEqual({ a: { b: { c: 101 } } });
+  });
+
+  it('should apply reviver to nested arrays', () => {
+    const result = json.parse('{"arr":[[1,2],[3,4]]}', {
+      reviver: (key, value) => {
+        if (typeof value === 'number') {
+          return value * 2;
+        }
+        return value;
+      },
+    });
+
+    expect(result).toEqual({ arr: [[2, 4], [6, 8]] });
+  });
+
+  it('should apply reviver with root key', () => {
+    let calledWithEmptyString = false;
+    json.parse('{"a":1}', {
+      reviver: (key, value) => {
+        if (key === '') {
+          calledWithEmptyString = true;
+        }
+        return value;
+      },
+    });
+
+    expect(calledWithEmptyString).toBe(true);
+  });
+
+  it('should apply reviver to array indices', () => {
+    const keys: string[] = [];
+    json.parse('[1,2,3]', {
+      reviver: (key, value) => {
+        keys.push(key);
+        return value;
+      },
+    });
+
+    expect(keys).toContain('0');
+    expect(keys).toContain('1');
+    expect(keys).toContain('2');
+    expect(keys).toContain('');
+  });
 });

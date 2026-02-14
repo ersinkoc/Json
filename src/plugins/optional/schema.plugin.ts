@@ -12,7 +12,11 @@ const formatValidators: Record<string, (value: string) => boolean> = {
     }
   },
   date: (value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value)),
-  'date-time': (value) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/.test(value) && !isNaN(Date.parse(value)),
+  'date-time': (value) => {
+    // ISO 8601 date-time requires timezone (Z or ±hh:mm)
+    const regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+    return regex.test(value) && !isNaN(Date.parse(value));
+  },
   uuid: (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value),
   regex: (value) => {
     try {
@@ -24,7 +28,23 @@ const formatValidators: Record<string, (value: string) => boolean> = {
   },
   hostname: (value) => /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(value) && value.length <= 253,
   'ipv4': (value) => /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(value),
-  'ipv6': (value) => /^(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}$/i.test(value),
+  'ipv6': (value) => {
+    // Simplified IPv6 validation - supports :: shorthand
+    // Check for obviously invalid patterns
+    if (value.includes(':::') || (value.match(/::/g) || []).length > 1) {
+      return false;
+    }
+    // Expand :: and count hextets
+    const parts = value.split(':');
+    if (parts.length < 2 || parts.length > 8) return false;
+
+    // Check each part
+    for (const part of parts) {
+      if (part === '' || part === '::') continue;
+      if (!/^[0-9a-fA-F]{1,4}$/.test(part)) return false;
+    }
+    return true;
+  },
 };
 
 function getType(value: unknown): string {
@@ -306,6 +326,7 @@ function validateAgainstSchema(
         const isProp = propKeys.includes(key);
         const isPattern = patternKeys.some(p => new RegExp(p).test(key));
 
+        // Check if this key is NOT in properties and NOT in patternProperties
         if (!isProp && !isPattern) {
           if (schema.additionalProperties === false) {
             errors.push({
@@ -323,9 +344,9 @@ function validateAgainstSchema(
 
     if (schema.patternProperties !== undefined) {
       for (const key of Object.keys(data)) {
-        for (const pattern of Object.keys(schema.patternProperties)) {
+        for (const [pattern, patternSchema] of Object.entries(schema.patternProperties)) {
           if (new RegExp(pattern).test(key)) {
-            errors.push(...validateAgainstSchema(data[key], schema.patternProperties[pattern]!, `${path}/${key}`));
+            errors.push(...validateAgainstSchema(data[key], patternSchema, `${path}/${key}`));
           }
         }
       }
@@ -395,15 +416,17 @@ function validateAgainstSchema(
   }
 
   if (schema.if !== undefined) {
+    // Evaluate the 'if' schema
     const ifErrors = validateAgainstSchema(data, schema.if, path);
-    if (ifErrors.length === 0) {
-      if (schema.then !== undefined) {
-        errors.push(...validateAgainstSchema(data, schema.then, path));
-      }
-    } else {
-      if (schema.else !== undefined) {
-        errors.push(...validateAgainstSchema(data, schema.else, path));
-      }
+    const ifValid = ifErrors.length === 0;
+
+    // If 'if' is valid and 'then' exists, validate against 'then'
+    if (ifValid && schema.then !== undefined) {
+      errors.push(...validateAgainstSchema(data, schema.then, path));
+    }
+    // If 'if' is NOT valid and 'else' exists, validate against 'else'
+    else if (!ifValid && schema.else !== undefined) {
+      errors.push(...validateAgainstSchema(data, schema.else, path));
     }
   }
 

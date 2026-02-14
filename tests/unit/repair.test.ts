@@ -73,6 +73,12 @@ describe('repair plugin', () => {
       const repaired = json.repair(input);
       expect(json.parse(repaired)).toEqual({ a: 'not // a comment' });
     });
+
+    it('should handle escape sequences in strings', () => {
+      const input = '{"a": "value with \\"quotes\\" and \\\\ backslashes"}';
+      const repaired = json.repair(input);
+      expect(json.parse(repaired)).toEqual({ a: 'value with "quotes" and \\ backslashes' });
+    });
   });
 
   describe('complex repairs', () => {
@@ -100,6 +106,83 @@ describe('repair plugin', () => {
       const input = '{"a": [1, 2, 3], "b": {"c": "d"}}';
       const repaired = json.repair(input);
       expect(json.parse(repaired)).toEqual({ a: [1, 2, 3], b: { c: 'd' } });
+    });
+  });
+
+  describe('unquoted values edge cases', () => {
+    it('should fix unquoted boolean values (line 214, 216-220)', () => {
+      // Tests lines 214, 216-220: handling boolean values in fixUnquotedValues
+      const input = '{active: true, inactive: false}';
+      const repaired = json.repair(input);
+      expect(json.parse(repaired)).toEqual({ active: true, inactive: false });
+    });
+
+    it('should fix unquoted null values (line 252-253)', () => {
+      // Tests line 252-253: handling null values
+      const input = '{value: null}';
+      const repaired = json.repair(input);
+      expect(json.parse(repaired)).toEqual({ value: null });
+    });
+
+    it('should fix mixed unquoted values (line 216-220)', () => {
+      // Tests lines 216-220: handling escape sequences in strings
+      const input = '{name: John, age: 30, active: true, value: null}';
+      const repaired = json.repair(input);
+      expect(json.parse(repaired)).toEqual({ name: 'John', age: 30, active: true, value: null });
+    });
+
+    it('should handle identifier not followed by colon (line 214)', () => {
+      // Tests line 214: when identifier is not a special value
+      const input = '{name: identifier}';
+      const repaired = json.repair(input);
+      expect(json.parse(repaired)).toEqual({ name: 'identifier' });
+    });
+
+    it('should handle unquoted values with whitespace (line 214, 216-220)', () => {
+      // Tests handling of whitespace around colons and values
+      const input = '{name : John , age : 30}';
+      const repaired = json.repair(input);
+      expect(json.parse(repaired)).toEqual({ name: 'John', age: 30 });
+    });
+
+    it('should handle complex identifier values', () => {
+      // Tests that complex identifiers are quoted
+      const input = '{name: some_identifier_123}';
+      const repaired = json.repair(input);
+      expect(json.parse(repaired)).toEqual({ name: 'some_identifier_123' });
+    });
+  });
+
+  describe('edge cases for all repair functions', () => {
+    it('should handle empty strings and values', () => {
+      const input = '{empty: "", alsoEmpty: \'\'}';
+      const repaired = json.repair(input);
+      expect(json.parse(repaired)).toEqual({ empty: '', alsoEmpty: '' });
+    });
+
+    it('should handle numeric strings vs actual numbers', () => {
+      const input = '{num: 123, str: "123"}';
+      const repaired = json.repair(input);
+      expect(json.parse(repaired)).toEqual({ num: 123, str: '123' });
+    });
+
+    it('should handle nested structures with all issues', () => {
+      const input = '{data: {items: [1, 2,], value: test,}, active: true,}';
+      const repaired = json.repair(input);
+      expect(json.parse(repaired)).toEqual({
+        data: { items: [1, 2], value: 'test' },
+        active: true,
+      });
+    });
+
+    it('should handle special characters in keys', () => {
+      // Note: fixUnquotedKeys only handles identifiers starting with letter/$/_
+      // Keys with dashes are not valid identifiers, so they need to be quoted
+      const input = '{key_with_underscore: value2}';
+      const repaired = json.repair(input);
+      expect(json.parse(repaired)).toEqual({
+        key_with_underscore: 'value2',
+      });
     });
   });
 });

@@ -154,4 +154,56 @@ describe('immutable plugin', () => {
       expect(json.isFrozen(42)).toBe(true);
     });
   });
+
+  describe('immutableRemove edge cases', () => {
+    it('should handle removing from non-object non-array values (line 120)', () => {
+      // Tests line 120: return value; (when value is neither array nor object)
+      const result = json.immutableRemove('string', 'path');
+      expect(result).toBe('string');
+
+      const result2 = json.immutableRemove(42, 'path');
+      expect(result2).toBe(42);
+
+      const result3 = json.immutableRemove(null, 'path');
+      expect(result3).toBe(null);
+
+      const result4 = json.immutableRemove(undefined, 'path');
+      expect(result4).toBe(undefined);
+    });
+
+    it('should handle array index out of bounds (line 120)', () => {
+      // Tests line 120: return value; (when index is out of bounds)
+      const obj = { arr: [1, 2, 3] };
+      const result = json.immutableRemove(obj, 'arr[10]');
+      expect(result).toEqual({ arr: [1, 2, 3] });
+    });
+
+    it('should handle removing property from non-object (line 120)', () => {
+      // Tests line 120: return value; (when value is not an object)
+      const result = json.immutableRemove('string', 'property');
+      expect(result).toBe('string');
+    });
+  });
+
+  describe('deepClone edge cases', () => {
+    it('should handle non-object non-array values (lines 140-141)', () => {
+      // Tests lines 140-141: default return for non-array, non-object values
+      // Note: immutable plugin's clone is simpler than utils/deep-clone.ts
+      // It doesn't handle Date, RegExp, Map, Set, Error specially
+      // These fall through to the default case which returns the value as-is
+      const fn = () => {};
+      expect(json.clone(fn)).toBe(fn);
+    });
+
+    it('should handle special objects', () => {
+      // Test that special objects are handled by the default case
+      // The immutable plugin's clone doesn't have special handling for Date/RegExp
+      // These fall through to return value as-is
+      const date = new Date('2024-01-01');
+      const cloned = json.clone(date);
+      // Since Date is not plain object or array, it returns a clone by iterating keys
+      // But Date has no enumerable keys, so it returns empty object
+      expect(typeof cloned).toBe('object');
+    });
+  });
 });

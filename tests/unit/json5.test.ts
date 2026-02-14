@@ -165,4 +165,104 @@ describe('JSON5 plugin', () => {
       expect(result).toContain("'test'");
     });
   });
+
+  describe('parse5 error cases', () => {
+    it('should throw error for invalid special number (line 327)', () => {
+      // Tests line 327: throw new JsonParseError for invalid special number
+      expect(() => json.parse5('Invalid')).toThrow();
+      expect(() => json.parse5('I')).toThrow();
+      expect(() => json.parse5('N')).toThrow();
+    });
+
+    it('should throw error for unexpected character after value', () => {
+      expect(() => json.parse5('true false')).toThrow();
+      expect(() => json.parse5('123 456')).toThrow();
+    });
+
+    it('should throw error for invalid null literal', () => {
+      // Tests line 312: throw error for invalid null
+      expect(() => json.parse5('nulp')).toThrow();
+      expect(() => json.parse5('nulx')).toThrow();
+      expect(() => json.parse5('nullx')).toThrow();
+    });
+
+    it('should parse -Infinity (line 320)', () => {
+      // Tests line 320-321: -Infinity handling
+      expect(json.parse5('-Infinity')).toBe(-Infinity);
+    });
+
+    it('should throw error for invalid special number', () => {
+      // Tests line 327: throw error for invalid special number that's not Infinity/-Infinity/NaN
+      expect(() => json.parse5('InvalidNumber')).toThrow();
+    });
+
+    it('should throw error for invalid null keyword', () => {
+      // Tests line 312: throw error for invalid null keyword
+      expect(() => json.parse5('nulp')).toThrow();
+      expect(() => json.parse5('nulx')).toThrow();
+    });
+
+    it('should stringify unknown types gracefully (line 386)', () => {
+      // Tests line 386: fallback stringify for unknown types
+      const result = json.stringify5(new Date());
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('stringify5 edge cases', () => {
+    it('should handle undefined values (line 336-338)', () => {
+      // Tests lines 336-338: handling undefined in stringify
+      const result = json.stringify5(undefined);
+      expect(result).toContain('null');
+    });
+
+    it('should handle empty arrays with indent (lines 366-371)', () => {
+      // Tests lines 366-371: empty array handling with indentation
+      const result = json.stringify5({ items: [] }, { indent: 2 });
+      expect(result).toContain('[]');
+      // Empty arrays with indent still format the outer object
+      expect(result).toContain('items:');
+    });
+
+    it('should handle nested arrays with indent (lines 366-371)', () => {
+      // Tests lines 366-371: array with indentation
+      const result = json.stringify5({ items: [1, 2, 3] }, { indent: 2 });
+      expect(result).toContain('\n');
+      expect(result).toContain('  ');
+      expect(result).toContain('1');
+      expect(result).toContain('2');
+      expect(result).toContain('3');
+    });
+
+    it('should handle empty objects with indent (line 386)', () => {
+      // Tests line 386: return 'null' for unknown types
+      const result = json.stringify5(Object.create(null));
+      expect(result).toBeDefined();
+    });
+
+    it('should handle special characters in strings', () => {
+      // Test string escaping with different quote types
+      const obj = { str: 'test\nvalue\t' };
+      const result = json.stringify5(obj);
+      expect(result).toContain('\\n');
+      expect(result).toContain('\\t');
+    });
+
+    it('should handle unknown object types (line 386)', () => {
+      // Tests line 386: return 'null' for unknown types
+      const unknown = Object.create(null);
+      unknown['key'] = 'value';
+      const result = json.stringify5(unknown);
+      expect(result).toBeDefined();
+      expect(result).toContain('key');
+    });
+
+    it('should handle array with single quotes and indent', () => {
+      // Tests array formatting with single quotes
+      const result = json.stringify5(['a', 'b'], { indent: 2, quote: "'" });
+      expect(result).toContain('[\n');
+      expect(result).toContain("'a'");
+      expect(result).toContain("'b'");
+    });
+  });
 });

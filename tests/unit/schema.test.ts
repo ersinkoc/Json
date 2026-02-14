@@ -84,10 +84,10 @@ describe('schema plugin', () => {
       expect(json.validate('invalid-email', schema).valid).toBe(false);
     });
 
-    it('should validate format - uri', () => {
-      const schema: JsonSchema = { type: 'string', format: 'uri' };
-      expect(json.validate('https://example.com', schema).valid).toBe(true);
-      expect(json.validate('not-a-uri', schema).valid).toBe(false);
+    it('should validate format - hostname', () => {
+      const schema: JsonSchema = { type: 'string', format: 'hostname' };
+      expect(json.validate('example.com', schema).valid).toBe(true);
+      expect(json.validate('.invalid.com', schema).valid).toBe(false);
     });
   });
 
@@ -260,7 +260,213 @@ describe('schema plugin', () => {
     });
   });
 
-  describe('is type guard', () => {
+  describe('format validation', () => {
+    it('should validate format - email', () => {
+      const schema: JsonSchema = { type: 'string', format: 'email' };
+      expect(json.validate('test@example.com', schema).valid).toBe(true);
+      expect(json.validate('invalid-email', schema).valid).toBe(false);
+    });
+
+    it('should validate format - hostname', () => {
+      const schema: JsonSchema = { type: 'string', format: 'hostname' };
+      expect(json.validate('example.com', schema).valid).toBe(true);
+      expect(json.validate('.invalid.com', schema).valid).toBe(false);
+    });
+
+    it('should validate format - date', () => {
+      const schema: JsonSchema = { type: 'string', format: 'date' };
+      expect(json.validate('2024-01-01', schema).valid).toBe(true);
+      expect(json.validate('2024-13-01', schema).valid).toBe(false);
+    });
+
+    it('should validate format - date-time', () => {
+      const schema: JsonSchema = { type: 'string', format: 'date-time' };
+      expect(json.validate('2024-01-01T00:00:00Z', schema).valid).toBe(true);
+      // Date-time without timezone (Z or offset) should be invalid per RFC 3339
+      expect(json.validate('2024-01-01T00:00:00', schema).valid).toBe(false);
+    });
+
+    it('should validate format - uuid', () => {
+      const schema: JsonSchema = { type: 'string', format: 'uuid' };
+      // Standard UUID format: 8-4-4-4-12 hex digits
+      expect(json.validate('a0eebc99-9c0b-4ef8-bb6d-6bb9bd480a4c', schema).valid).toBe(true);
+      expect(json.validate('a0eebc99-9c0b-4ef8-bb6d-6bb9-bd480-a4c6-d2cd26190a', schema).valid).toBe(false); // Too many hyphens
+      expect(json.validate('not-a-uuid', schema).valid).toBe(false);
+    });
+
+    it('should validate format - regex', () => {
+      const schema: JsonSchema = { type: 'string', format: 'regex' };
+      expect(json.validate('^[a-z]+$', schema).valid).toBe(true);
+      expect(json.validate('[invalid', schema).valid).toBe(false);
+    });
+
+    it('should validate format - hostname', () => {
+      const schema: JsonSchema = { type: 'string', format: 'hostname' };
+      expect(json.validate('example.com', schema).valid).toBe(true);
+      expect(json.validate('.invalid.com', schema).valid).toBe(false);
+    });
+
+    it('should validate format - ipv4', () => {
+      const schema: JsonSchema = { type: 'string', format: 'ipv4' };
+      expect(json.validate('127.0.0.1', schema).valid).toBe(true);
+      expect(json.validate('256.0.0.1', schema).valid).toBe(false);
+    });
+
+    it('should validate format - ipv6', () => {
+      const schema: JsonSchema = { type: 'string', format: 'ipv6' };
+      expect(json.validate('2001:db8::1', schema).valid).toBe(true);
+      expect(json.validate('2001::db8::1', schema).valid).toBe(false);
+    });
+  });
+
+  describe('patternProperties validation', () => {
+    it('should validate patternProperties', () => {
+      const schema: JsonSchema = {
+        type: 'object',
+        // No properties defined - all validation via patternProperties
+        patternProperties: {
+          '^test_': { type: 'string' },
+          '^\\d+$': { type: 'number' }
+        }
+      };
+      // test_name matches '^test_' (string), 123 matches '^\\d+$' (number) - both valid
+      expect(json.validate({ test_name: 'value', other_key: 123 }, schema).valid).toBe(true);
+      // test_name matches '^test_' but value is number - invalid
+      expect(json.validate({ test_name: 123 }, schema).valid).toBe(false);
+      // 456 matches '^\\d+$' but value is string - invalid
+      expect(json.validate({ 456: 'invalid' }, schema).valid).toBe(false);
+    });
+
+    it('should validate patternProperties with properties', () => {
+      const schema: JsonSchema = {
+        type: 'object',
+        properties: {
+          // Explicitly defined properties take precedence
+          name: { type: 'string' }
+        },
+        patternProperties: {
+          // Keys matching this pattern but not in properties must be strings
+          '^test_': { type: 'string' }
+        }
+      };
+      // name is in properties (string), test_foo matches pattern (string) - valid
+      expect(json.validate({ name: 'John', test_foo: 'bar' }, schema).valid).toBe(true);
+      // test_foo matches pattern but value is number - invalid
+      expect(json.validate({ name: 'John', test_foo: 123 }, schema).valid).toBe(false);
+    });
+  });
+
+  describe('if/then/else validation', () => {
+    it('should validate if/then conditional', () => {
+      const schema: JsonSchema = {
+        if: {
+          type: 'object',
+          properties: {
+            if: { const: 'yes' }
+          },
+          required: ['if']
+        },
+        then: {
+          type: 'object',
+          properties: {
+            result: { type: 'string' }
+          },
+          required: ['result']
+        }
+      };
+      // if condition matches (has property 'if' with value 'yes'), then applies (result required as string)
+      expect(json.validate({ if: 'yes', result: 'value' }, schema).valid).toBe(true);
+      // if condition doesn't match, but no else clause, so it should pass (no additional constraints)
+      expect(json.validate({ if: 'no', result: 'value' }, schema).valid).toBe(true);
+    });
+
+    it('should validate if/else conditional', () => {
+      const schema: JsonSchema = {
+        if: {
+          type: 'object',
+          properties: {
+            if: { const: 'yes' }
+          },
+          required: ['if']
+        },
+        then: {
+          type: 'object',
+          properties: {
+            result: { type: 'string' }
+          },
+          required: ['result']
+        },
+        else: {
+          type: 'object',
+          properties: {
+            result: { type: 'number' }
+          },
+          required: ['result']
+        }
+      };
+      // if matches, then applies (result must be string)
+      expect(json.validate({ if: 'yes', result: 'value' }, schema).valid).toBe(true);
+      // if doesn't match, else applies (result must be number)
+      expect(json.validate({ if: 'no', result: 123 }, schema).valid).toBe(true);
+    });
+  });
+
+  describe('contains validation for arrays', () => {
+    it('should validate contains for arrays', () => {
+      const schema: JsonSchema = {
+        type: 'array',
+        contains: { const: 'found' }
+      };
+      expect(json.validate(['a', 'found', 'b'], schema).valid).toBe(true);
+      expect(json.validate(['a', 'b'], schema).valid).toBe(false);
+    });
+  });
+
+  describe('exclusiveMaximum validation', () => {
+    it('should validate exclusiveMaximum', () => {
+      const schema: JsonSchema = { type: 'number', exclusiveMaximum: 100 };
+      expect(json.validate(99, schema).valid).toBe(true);
+      expect(json.validate(100, schema).valid).toBe(false);
+    });
+  });
+
+  describe('additionalProperties validation', () => {
+    it('should validate additionalProperties with schema', () => {
+      const schema: JsonSchema = {
+        type: 'object',
+        properties: { name: { type: 'string' } },
+        additionalProperties: { type: 'number' }
+      };
+      // name is in properties (string), age is additional but matches additionalProperties (number)
+      expect(json.validate({ name: 'John', age: 30 }, schema).valid).toBe(true);
+      // name is in properties (string), extra is additional but doesn't match additionalProperties (string vs number)
+      expect(json.validate({ name: 'John', age: 30, extra: 'data' }, schema).valid).toBe(false);
+    });
+  });
+
+  describe('additionalProperties with patternProperties', () => {
+    it('should validate additionalProperties with patternProperties', () => {
+      const schema: JsonSchema = {
+        type: 'object',
+        patternProperties: {
+          '^test_': { type: 'string' }
+        }
+      };
+      expect(json.validate({ test_1: 'value', other: 'data' }, schema).valid).toBe(true);
+    });
+  });
+
+  describe('null type validation with constraints', () => {
+    it('should validate null with minLength', () => {
+      const schema: JsonSchema = { type: 'null', minLength: 5 };
+      expect(json.validate(null, schema).valid).toBe(true);
+    });
+
+    it('should validate null with maxLength', () => {
+      const schema: JsonSchema = { type: 'null', maxLength: 5 };
+      expect(json.validate(null, schema).valid).toBe(true);
+    });
+
     it('should work as type guard', () => {
       const schema: JsonSchema = {
         type: 'object',

@@ -39,6 +39,34 @@ describe('path-parser', () => {
     it('should parse deep nesting', () => {
       expect(parsePath('a.b.c.d')).toEqual(['a', 'b', 'c', 'd']);
     });
+
+    it('should parse wildcard notation', () => {
+      expect(parsePath('items[*]')).toEqual(['items', '*']);
+    });
+
+    it('should parse escaped quotes in bracket notation', () => {
+      expect(parsePath('["key\\"with\\"quotes"]')).toEqual(['key"with"quotes']);
+    });
+
+    it('should throw on unterminated bracket', () => {
+      expect(() => parsePath('items[0')).toThrow();
+    });
+
+    it('should throw on unterminated string', () => {
+      expect(() => parsePath('["key')).toThrow();
+    });
+
+    it('should handle non-numeric in brackets as string', () => {
+      expect(parsePath('items[abc]')).toEqual(['items', 'abc']);
+    });
+
+    it('should parse leading dot notation', () => {
+      expect(parsePath('.a.b')).toEqual(['a', 'b']);
+    });
+
+    it('should parse parent segment notation', () => {
+      expect(parsePath('a..b')).toEqual(['a', '..', 'b']);
+    });
   });
 
   describe('stringifyPath', () => {

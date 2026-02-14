@@ -175,6 +175,97 @@ describe('JsonKernelImpl', () => {
       kernel.unload('test-plugin');
       expect(destroyed).toBe(true);
     });
+
+    it('should reinstall remaining plugins when unloading', () => {
+      const plugin1: JsonPlugin = {
+        name: 'plugin1',
+        version: '1.0.0',
+        install: (k) => {
+          k.register('method1', () => 'from1');
+        },
+      };
+
+      const plugin2: JsonPlugin = {
+        name: 'plugin2',
+        version: '1.0.0',
+        install: (k) => {
+          k.register('method2', () => 'from2');
+        },
+      };
+
+      kernel.use(plugin1, plugin2);
+      expect(kernel.has('method1')).toBe(true);
+      expect(kernel.has('method2')).toBe(true);
+
+      // Unload plugin1 - plugin2 should be reinstalled
+      kernel.unload('plugin1');
+      expect(kernel.has('method2')).toBe(true);
+      expect(kernel.has('method1')).toBe(false);
+    });
+
+    it('should skip errors when reinstalling plugins after unload', () => {
+      const plugin1: JsonPlugin = {
+        name: 'plugin1',
+        version: '1.0.0',
+        install: () => {},
+      };
+
+      const plugin2: JsonPlugin = {
+        name: 'plugin2',
+        version: '1.0.0',
+        install: () => {
+          kernel.register('method2', () => 'from2');
+        },
+      };
+
+      // Make plugin2's install fail on second call
+      let callCount = 0;
+      const failingPlugin: JsonPlugin = {
+        name: 'failing',
+        version: '1.0.0',
+        install: () => {
+          callCount++;
+          if (callCount > 1) {
+            throw new Error('Install fails on reinstall');
+          }
+        },
+      };
+
+      kernel.use(plugin1, failingPlugin, plugin2);
+      expect(kernel.has('method2')).toBe(true);
+
+      // Unload plugin1 - should not throw despite failing plugin reinstall
+      expect(() => kernel.unload('plugin1')).not.toThrow();
+      // plugin2 should still be reinstalled even though failingPlugin throws
+      expect(kernel.has('method2')).toBe(true);
+    });
+
+    it('should clear all methods when unloading', () => {
+      const plugin1: JsonPlugin = {
+        name: 'plugin1',
+        version: '1.0.0',
+        install: (k) => {
+          k.register('method1', () => 'from1');
+        },
+      };
+
+      const plugin2: JsonPlugin = {
+        name: 'plugin2',
+        version: '1.0.0',
+        install: (k) => {
+          k.register('method2', () => 'from2');
+        },
+      };
+
+      kernel.use(plugin1, plugin2);
+      expect(kernel.has('method1')).toBe(true);
+      expect(kernel.has('method2')).toBe(true);
+
+      kernel.unload('plugin1');
+      // After unload, methods are cleared and remaining plugins are reinstalled
+      expect(kernel.has('method1')).toBe(false);
+      expect(kernel.has('method2')).toBe(true);
+    });
   });
 
   describe('event system', () => {
@@ -252,6 +343,200 @@ describe('JsonKernelImpl', () => {
       const config = { parse: { maxDepth: 50 } };
       const k = new JsonKernelImpl(config);
       expect(k.getConfig()).toEqual(config);
+    });
+  });
+
+  describe('getPlugin', () => {
+    it('should return loaded plugin', () => {
+      const plugin: JsonPlugin = {
+        name: 'test-plugin',
+        version: '1.0.0',
+        install: () => {},
+      };
+      kernel.use(plugin);
+      const retrieved = kernel.getPlugin('test-plugin');
+      expect(retrieved).toBe(plugin);
+    });
+
+    it('should return undefined for non-existent plugin', () => {
+      expect(kernel.getPlugin('nonexistent')).toBeUndefined();
+    });
+  });
+
+  describe('listPlugins', () => {
+    it('should return empty array when no plugins loaded', () => {
+      expect(kernel.listPlugins()).toEqual([]);
+    });
+
+    it('should return list of loaded plugin names', () => {
+      const plugin1: JsonPlugin = {
+        name: 'plugin-1',
+        version: '1.0.0',
+        install: () => {},
+      };
+      const plugin2: JsonPlugin = {
+        name: 'plugin-2',
+        version: '1.0.0',
+        install: () => {},
+      };
+      kernel.use(plugin1, plugin2);
+      const plugins = kernel.listPlugins();
+      expect(plugins).toContain('plugin-1');
+      expect(plugins).toContain('plugin-2');
+      expect(plugins).toHaveLength(2);
+    });
+  });
+
+  describe('has', () => {
+    it('should return false for non-existent method', () => {
+      expect(kernel.has('nonexistent')).toBe(false);
+    });
+
+    it('should return true for registered method', () => {
+      kernel.register('testMethod', () => true);
+      expect(kernel.has('testMethod')).toBe(true);
+    });
+  });
+
+  describe('handleError', () => {
+    it('should call config onError handler', () => {
+      const onError = vi.fn();
+      const k = new JsonKernelImpl({ onError });
+      const error = new Error('Test error');
+      k.handleError(error);
+      expect(onError).toHaveBeenCalledWith(error);
+    });
+
+    it('should emit error event when no onError handler', () => {
+      let emittedError: Error | undefined;
+      kernel.on('error', (err) => {
+        emittedError = err as Error;
+      });
+      const error = new Error('Test error');
+      kernel.handleError(error);
+      expect(emittedError).toBe(error);
+    });
+
+    it('should emit error event when calling handleError', () => {
+      let receivedError: Error | undefined;
+      kernel.on('error', (err) => {
+        receivedError = err as Error;
+      });
+      const error = new Error('Test error');
+      kernel.handleError(error);
+      expect(receivedError).toBe(error);
+    });
+  });
+
+  describe('init with onInit', () => {
+    it('should call onInit for plugins with onInit hook', async () => {
+      let initCalled = false;
+      const plugin: JsonPlugin = {
+        name: 'test-plugin',
+        version: '1.0.0',
+        install: () => {},
+        onInit: () => {
+          initCalled = true;
+        },
+      };
+
+      kernel.use(plugin);
+      await kernel.init();
+      expect(initCalled).toBe(true);
+    });
+
+    it('should call onInit with context', async () => {
+      let receivedContext: any;
+      const ctx = { value: 42 };
+      const plugin: JsonPlugin = {
+        name: 'test-plugin',
+        version: '1.0.0',
+        install: () => {},
+        onInit: (context) => {
+          receivedContext = context;
+        },
+      };
+
+      const k = new JsonKernelImpl({}, ctx);
+      k.use(plugin);
+      await k.init();
+      expect(receivedContext).toBe(ctx);
+    });
+
+    it('should emit kernel:initialized event', async () => {
+      let initialized = false;
+      kernel.on('kernel:initialized', () => {
+        initialized = true;
+      });
+      await kernel.init();
+      expect(initialized).toBe(true);
+    });
+
+    it('should not init twice', async () => {
+      let count = 0;
+      const plugin: JsonPlugin = {
+        name: 'test-plugin',
+        version: '1.0.0',
+        install: () => {},
+        onInit: () => {
+          count++;
+        },
+      };
+
+      kernel.use(plugin);
+      await kernel.init();
+      await kernel.init();
+      expect(count).toBe(1);
+    });
+
+    it('should call onInit for plugins loaded after initialization', async () => {
+      let firstInit = false;
+      let secondInit = false;
+
+      const plugin1: JsonPlugin = {
+        name: 'plugin1',
+        version: '1.0.0',
+        install: () => {},
+        onInit: () => {
+          firstInit = true;
+        },
+      };
+
+      const plugin2: JsonPlugin = {
+        name: 'plugin2',
+        version: '1.0.0',
+        install: () => {},
+        onInit: () => {
+          secondInit = true;
+        },
+      };
+
+      kernel.use(plugin1);
+      await kernel.init();
+      expect(firstInit).toBe(true);
+      expect(secondInit).toBe(false);
+
+      kernel.use(plugin2);
+      expect(secondInit).toBe(true);
+    });
+  });
+
+  describe('emit plugin:unloaded', () => {
+    it('should emit plugin:unloaded event', () => {
+      let unloadedName: string | undefined;
+      kernel.on('plugin:unloaded', (data: any) => {
+        unloadedName = data.name;
+      });
+
+      const plugin: JsonPlugin = {
+        name: 'test-plugin',
+        version: '1.0.0',
+        install: () => {},
+      };
+
+      kernel.use(plugin);
+      kernel.unload('test-plugin');
+      expect(unloadedName).toBe('test-plugin');
     });
   });
 });

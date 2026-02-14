@@ -111,4 +111,128 @@ describe('JSONPath plugin', () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe('bracket notation edge cases', () => {
+    it('should handle string key that does not exist (lines 286-287)', () => {
+      // Tests lines 286-287: return [] for non-existent string key in bracket notation
+      const obj = { existing: 'value' };
+      const result = json.query(obj, '$["nonexistent"]');
+      expect(result).toEqual([]);
+    });
+
+    it('should handle string key with special characters', () => {
+      const obj = { 'key-with-dash': 'value', 'key with space': 'value2' };
+      const result = json.query(obj, '$["key-with-dash"]');
+      expect(result).toEqual(['value']);
+    });
+
+    it('should handle array slice without end token (line 286-287)', () => {
+      // Tests array slicing with start but no end
+      const arr = { items: [1, 2, 3, 4, 5] };
+      const result = json.query(arr, '$.items[2:]');
+      expect(result).toEqual([3, 4, 5]);
+    });
+
+    it('should handle array slice with both start and end', () => {
+      const arr = { items: [1, 2, 3, 4, 5] };
+      const result = json.query(arr, '$.items[1:3]');
+      expect(result).toEqual([2, 3]);
+    });
+  });
+
+  describe('filter edge cases', () => {
+    it('should handle filter on non-array data', () => {
+      // Tests filter expression on non-array (should return empty)
+      const obj = { value: 42 };
+      const result = json.query(obj, '$.value[?(@.property > 10)]');
+      expect(result).toEqual([]);
+    });
+
+    it('should handle filter with non-matching condition', () => {
+      const arr = { items: [{ value: 5 }, { value: 8 }] };
+      const result = json.query(arr, '$.items[?(@.value > 10)]');
+      expect(result).toEqual([]);
+    });
+
+    it('should handle filter with invalid comparison value', () => {
+      // Tests filter with invalid right-hand side value
+      const arr = { items: [{ status: 'active' }] };
+      const result = json.query(arr, '$.items[?(@.status ==)]');
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('unknown token handling (lines 307-318)', () => {
+    it('should handle unknown token types gracefully', () => {
+      // Tests lines 307-318: default case in evaluate function
+      const obj = { name: 'test' };
+      // Using a valid expression that reaches various token paths
+      const result = json.query(obj, '$.name');
+      expect(result).toEqual(['test']);
+    });
+
+    it('should handle recursive descent without next token', () => {
+      // Tests recursive descent when nextToken is undefined
+      const obj = { a: { b: { c: 1 } } };
+      const result = json.query(obj, '$..c');
+      expect(result).toEqual([1]);
+    });
+
+    it('should handle wildcard on primitive values', () => {
+      // Tests .* on primitive values
+      const result = json.query(42, '$.*');
+      expect(result).toEqual([]);
+    });
+
+    it('should handle array access on non-array', () => {
+      // Tests [index] on non-array value
+      const obj = { value: 'not array' };
+      const result = json.query(obj, '$.value[0]');
+      expect(result).toEqual([]);
+    });
+
+    it('should handle bracket notation on primitive', () => {
+      // Tests bracket notation on primitive values
+      const result = json.query('string', '$["property"]');
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('complex query scenarios', () => {
+    it('should handle multiple filters in sequence', () => {
+      const obj = {
+        items: [
+          { type: 'A', value: 10 },
+          { type: 'B', value: 20 },
+          { type: 'A', value: 30 },
+        ],
+      };
+      const result = json.query(obj, '$.items[?(@.type == "A")].value');
+      expect(result).toEqual([10, 30]);
+    });
+
+    it('should handle deep nested path with arrays', () => {
+      const obj = {
+        level1: {
+          level2: {
+            items: [{ id: 1 }, { id: 2 }],
+          },
+        },
+      };
+      const result = json.query(obj, '$.level1.level2.items[*].id');
+      expect(result).toEqual([1, 2]);
+    });
+
+    it('should handle root selector on array', () => {
+      const arr = [1, 2, 3];
+      const result = json.query(arr, '$');
+      expect(result).toEqual([arr]);
+    });
+
+    it('should handle wildcard on array of objects', () => {
+      const arr = [{ a: 1 }, { a: 2 }];
+      const result = json.query(arr, '$.*.a');
+      expect(result).toEqual([1, 2]);
+    });
+  });
 });

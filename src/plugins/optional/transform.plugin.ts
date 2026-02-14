@@ -6,7 +6,7 @@ function deepMerge(
   source: unknown,
   options: MergeOptions = {}
 ): unknown {
-  const { deep = true, arrayMerge = 'replace' } = options;
+  const { deep = true, arrayMerge = 'replace' } = options || {};
 
   if (!deep) {
     return { ...target as object, ...source as object };
@@ -51,7 +51,7 @@ function flattenObject(
   obj: unknown,
   options: FlattenOptions = {}
 ): Record<string, unknown> {
-  const { separator = '.', safe = false } = options;
+  const { separator = '.', safe = false } = options || {};
   const result: Record<string, unknown> = {};
 
   function flatten(current: unknown, prefix: string = ''): void {

@@ -117,4 +117,83 @@ describe('type plugin', () => {
       expect(result).toContain('zip: string');
     });
   });
+
+  describe('union types (lines 108-111)', () => {
+    it('should infer union types from array with mixed types', () => {
+      // Tests lines 108-111: union type handling
+      const data = [1, 'string', true, null];
+      const result = json.infer(data);
+      expect(result).toContain(' | ');
+      expect(result).toContain('number');
+      expect(result).toContain('string');
+      expect(result).toContain('boolean');
+      expect(result).toContain('null');
+    });
+
+    it('should infer union types from array with objects', () => {
+      const data = [{ type: 'a' }, { type: 'b' }];
+      const result = json.infer(data);
+      // Objects with same structure don't create union
+      expect(result).toBeDefined();
+    });
+
+    it('should infer union types from array with mixed objects', () => {
+      const data = [{ a: 1 }, { b: 2 }];
+      const result = json.infer(data);
+      expect(result).toContain(' | ');
+    });
+
+    it('should infer union with multiple types', () => {
+      // Tests union type with complex types
+      const data = [{ name: 'John' }, ['array'], 42, 'string', true];
+      const result = json.infer(data);
+      expect(result).toContain(' | ');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle unknown type (line 136)', () => {
+      // Tests line 136: return 'unknown' for default case
+      const result = json.infer(undefined);
+      expect(result).toContain('unknown');
+    });
+
+    it('should handle object with no keys', () => {
+      const result = json.infer({});
+      // Empty objects produce interface with no properties
+      expect(result).toContain('interface');
+    });
+
+    it('should handle array with union types and options', () => {
+      const data = [1, 'string', true];
+      const result = json.infer(data, { name: 'Mixed', export: true });
+      // Union types are formatted inline without interface declaration
+      expect(result).toContain(' | ');
+      expect(result).toContain('number');
+      expect(result).toContain('string');
+      expect(result).toContain('boolean');
+    });
+
+    it('should handle nested objects with union arrays', () => {
+      const data = {
+        items: [1, 'two'],
+      };
+      const result = json.infer(data, { name: 'Data' });
+      expect(result).toContain('items:');
+      expect(result).toContain(' | ');
+    });
+
+    it('should handle empty union array', () => {
+      const result = json.infer([]);
+      expect(result).toContain('never[]');
+    });
+
+    it('should handle object without children', () => {
+      // When an object has no properties (like Object.create(null) with no keys)
+      // it returns an interface with no properties
+      const obj = {};
+      const result = json.infer(obj);
+      expect(result).toContain('interface');
+    });
+  });
 });

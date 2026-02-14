@@ -134,6 +134,66 @@ describe('query plugin', () => {
       json.remove(data, 'b');
       expect(data).toEqual({ a: 1, b: 2 });
     });
+
+    it('should handle removing nested array elements', () => {
+      const data = { arr: [[1, 2], [3, 4]] };
+      const result = json.remove(data, 'arr[0][1]');
+      expect(result).toEqual({ arr: [[1], [3, 4]] });
+    });
+
+    it('should return unchanged if path does not exist in array', () => {
+      const data = { arr: [1, 2, 3] };
+      const result = json.remove(data, 'arr[10]');
+      expect(result).toEqual({ arr: [1, 2, 3] });
+    });
+
+    it('should handle removing from nested arrays', () => {
+      const data = { matrix: [[1, 2, 3], [4, 5, 6]] };
+      const result = json.remove(data, 'matrix[1][0]');
+      expect(result).toEqual({ matrix: [[1, 2, 3], [5, 6]] });
+    });
+
+    it('should handle removing non-existent nested property', () => {
+      const data = { a: { b: 1 } };
+      const result = json.remove(data, 'a.x.y');
+      expect(result).toEqual({ a: { b: 1 } });
+    });
+
+    it('should return unchanged when removing from primitive value', () => {
+      const data = { a: 1 };
+      const result = json.remove(data, 'a.b');
+      expect(result).toEqual({ a: 1 });
+    });
+
+    it('should handle removing with negative array index', () => {
+      const data = { arr: [1, 2, 3] };
+      const result = json.remove(data, 'arr[-1]');
+      expect(result).toEqual({ arr: [1, 2, 3] });
+    });
+
+    it('should handle removing nested path with invalid array index', () => {
+      const data = { arr: [{ x: 1 }] };
+      const result = json.remove(data, 'arr[10].x');
+      expect(result).toEqual({ arr: [{ x: 1 }] });
+    });
+
+    it('should handle removing with non-numeric array index', () => {
+      const data = { arr: [1, 2, 3] };
+      const result = json.remove(data, 'arr[abc]');
+      expect(result).toEqual({ arr: [1, 2, 3] });
+    });
+
+    it('should return undefined when removing with empty path', () => {
+      const data = { a: 1 };
+      const result = json.remove(data, '');
+      expect(result).toBeUndefined();
+    });
+
+    it('should handle removing from non-existent nested path with primitive', () => {
+      const data = { a: 5 };
+      const result = json.remove(data, 'a.b.c');
+      expect(result).toEqual({ a: 5 });
+    });
   });
 
   describe('paths', () => {

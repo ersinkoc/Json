@@ -169,4 +169,59 @@ describe('stringify', () => {
       expect(result).toBe('{"name":"John"}');
     });
   });
+
+  describe('edge cases', () => {
+    it('should handle bigint', () => {
+      const result = json.stringify({ big: BigInt(123) });
+      expect(result).toBe('{"big":123}');
+    });
+
+    it('should handle function as null', () => {
+      const result = json.stringify({ fn: () => {} });
+      expect(result).toBe('{"fn":null}');
+    });
+
+    it('should handle symbol as null', () => {
+      const result = json.stringify({ sym: Symbol('test') });
+      expect(result).toBe('{"sym":null}');
+    });
+
+    it('should handle empty object with indent', () => {
+      const result = json.stringify({}, { indent: 2 });
+      expect(result).toBe('{}');
+    });
+
+    it('should handle empty array with indent', () => {
+      const result = json.stringify([], { indent: 2 });
+      expect(result).toBe('[]');
+    });
+
+    it('should handle nested empty structures with indent', () => {
+      const result = json.stringify({ a: {}, b: [] }, { indent: 2 });
+      expect(result).toBe('{\n  "a": {},\n  "b": []\n}');
+    });
+  });
+
+  describe('replacer edge cases', () => {
+    it('should call replacer with empty key at root', () => {
+      let calledWithEmpty = false;
+      json.stringify({ a: 1 }, {
+        replacer: (key, value) => {
+          if (key === '') calledWithEmpty = true;
+          return value;
+        },
+      });
+      expect(calledWithEmpty).toBe(true);
+    });
+
+    it('should handle replacer returning undefined', () => {
+      const result = json.stringify({ a: 1, b: 2, c: 3 }, {
+        replacer: (key, value) => {
+          if (key === 'b') return undefined;
+          return value;
+        },
+      });
+      expect(result).toBe('{"a":1,"c":3}');
+    });
+  });
 });
