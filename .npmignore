@@ -1,0 +1,27 @@
+# Source
+src/
+tests/
+examples/
+mcp-server/
+website/
+
+# Config
+*.config.*
+tsconfig.json
+.eslintrc*
+.prettierrc*
+
+# Development
+node_modules/
+coverage/
+*.log
+.DS_Store
+
+# Build artifacts
+*.tsbuildinfo
+
+# Docs
+IMPLEMENTATION.md
+SPECIFICATION.md
+TASKS.md
+oxog-json-claude-code-prompt.md

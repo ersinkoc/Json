@@ -1,0 +1,93 @@
+# @oxog/json
+
+Zero-dependency JSON toolkit for TypeScript.
+
+## Install
+
+```
+npm install @oxog/json
+```
+
+## Core API
+
+```typescript
+import { json } from '@oxog/json';
+
+// Parse/stringify
+json.parse(text, options?)
+json.safeParse(text)  // Returns { ok, value } | { ok, error }
+json.stringify(value, options?)
+
+// Deep property access
+json.get(obj, path, fallback?)
+json.set(obj, path, value)
+json.has(obj, path)
+json.remove(obj, path)
+json.paths(obj)
+
+// Options
+parse: { reviver?, maxDepth?, maxLength? }
+stringify: { indent?, replacer?, circular?, sortKeys? }
+```
+
+## Optional Plugins
+
+```typescript
+import { 
+  pathPlugin,
+  transformPlugin,
+  diffPlugin,
+  patchPlugin,
+  schemaPlugin,
+  streamPlugin,
+  repairPlugin,
+  json5Plugin,
+  typePlugin,
+  immutablePlugin
+} from '@oxog/json/plugins';
+
+json.use(plugin1, plugin2, ...);
+```
+
+### Available Plugins
+
+- `pathPlugin` - JSONPath: `json.query(data, '$.store.books[*].title')`
+- `transformPlugin` - `merge`, `flatten`, `unflatten`, `pick`, `omit`, `sortKeys`, `mapValues`, `filterValues`
+- `diffPlugin` - `json.diff(before, after)` → RFC 6902 patch
+- `patchPlugin` - `json.patch(obj, ops)`
+- `schemaPlugin` - `json.validate(data, schema)`, `json.compile(schema)`, `json.is(data, schema)`
+- `streamPlugin` - `json.stream.parse(readable)`, `json.stream.parseLines(readable)`
+- `repairPlugin` - `json.repair(text)` → fixed JSON
+- `json5Plugin` - `json.parse5(text)`, `json.stringify5(value)`
+- `typePlugin` - `json.infer(data, { name })` → TypeScript interface string
+- `immutablePlugin` - `json.freeze(obj)`, `json.immutableSet(obj, path, val)`
+
+## Presets
+
+```typescript
+import { preset } from '@oxog/json/plugins';
+json.use(preset.full);      // All plugins
+json.use(preset.minimal);   // transform + repair
+json.use(preset.validation); // schema + type
+```
+
+## Factory
+
+```typescript
+import { createJson } from '@oxog/json';
+const j = createJson({ parse: { maxDepth: 50 } });
+```
+
+## Errors
+
+| Code | Description |
+|------|-------------|
+| JSON_PARSE_ERROR | Invalid JSON |
+| JSON_PATH_ERROR | Invalid path |
+| JSON_SCHEMA_ERROR | Validation failed |
+| PLUGIN_ERROR | Plugin error |
+
+## Links
+
+- npm: https://npmjs.com/package/@oxog/json
+- GitHub: https://github.com/ersinkoc/json
