@@ -1,26 +1,22 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import path from 'path'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': '/src',
+      '@': path.resolve(__dirname, './src'),
     },
   },
   build: {
-    outDir: 'dist',
-    sourcemap: false,
-    minify: 'esbuild',
-    chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-ui': ['lucide-react', '@radix-ui/react-tabs', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tooltip'],
-          'vendor-codeshine': ['@oxog/codeshine'],
+          codeshine: ['@oxog/codeshine', '@oxog/codeshine/react'],
         },
       },
     },
   },
-});
+})
