@@ -1,9 +1,5 @@
-import type {
-  JsonPlugin,
-  JsonKernel,
-  JsonConfig,
-} from './types';
-import { PluginError } from './errors';
+import type { JsonPlugin, JsonKernel, JsonConfig } from "./types";
+import { PluginError } from "./errors";
 
 type EventHandler = (...args: unknown[]) => void;
 
@@ -14,7 +10,10 @@ class SimpleEventEmitter {
     if (!this.handlers.has(event)) {
       this.handlers.set(event, new Set());
     }
-    this.handlers.get(event)!.add(handler);
+    const handlers = this.handlers.get(event);
+    if (handlers) {
+      handlers.add(handler);
+    }
   }
 
   off(event: string, handler: EventHandler): void {
@@ -83,7 +82,7 @@ export class JsonKernelImpl<TContext = unknown>
         if (!this.plugins.has(dep)) {
           throw new PluginError(
             `Plugin "${plugin.name}" requires plugin "${dep}"`,
-            plugin.name
+            plugin.name,
           );
         }
       }
@@ -92,7 +91,10 @@ export class JsonKernelImpl<TContext = unknown>
     try {
       plugin.install(this);
       this.plugins.set(plugin.name, plugin);
-      this.emit('plugin:loaded', { name: plugin.name, version: plugin.version });
+      this.emit("plugin:loaded", {
+        name: plugin.name,
+        version: plugin.version,
+      });
     } catch (e) {
       const error = e instanceof Error ? e : new Error(String(e));
       if (plugin.onError) {
@@ -101,7 +103,7 @@ export class JsonKernelImpl<TContext = unknown>
       throw new PluginError(
         `Failed to load plugin "${plugin.name}": ${error.message}`,
         plugin.name,
-        { originalError: error }
+        { originalError: error },
       );
     }
   }
@@ -118,7 +120,7 @@ export class JsonKernelImpl<TContext = unknown>
         plugin.onDestroy();
       }
       this.plugins.delete(name);
-      this.emit('plugin:unloaded', { name });
+      this.emit("plugin:unloaded", { name });
 
       // Remove all methods registered by this plugin
       // The plugin's install method registers methods, but we don't track which ones
@@ -146,7 +148,7 @@ export class JsonKernelImpl<TContext = unknown>
     }
 
     this.initialized = true;
-    this.emit('kernel:initialized');
+    this.emit("kernel:initialized");
   }
 
   /** @example
@@ -195,7 +197,7 @@ export class JsonKernelImpl<TContext = unknown>
     if (this.config.onError) {
       this.config.onError(error);
     } else {
-      this.emit('error', error);
+      this.emit("error", error);
     }
   }
 
@@ -232,7 +234,7 @@ export class JsonKernelImpl<TContext = unknown>
  */
 export function createJson<TContext = unknown>(
   config: JsonConfig = {},
-  context?: TContext
+  context?: TContext,
 ): JsonKernel<TContext> & Record<string, Function> {
   const kernel = new JsonKernelImpl<TContext>(config, context);
 
@@ -243,17 +245,18 @@ export function createJson<TContext = unknown>(
         return method;
       }
       const value = target[prop as keyof JsonKernelImpl<TContext>];
-      if (typeof value === 'function') {
+      if (typeof value === "function") {
         return value.bind(target);
       }
       return value;
     },
     has(target, prop: string) {
-      return target.methods.has(prop) || (prop in target);
+      return target.methods.has(prop) || prop in target;
     },
   };
 
-  return new Proxy(kernel, handler) as unknown as JsonKernel<TContext> & Record<string, Function>;
+  return new Proxy(kernel, handler) as unknown as JsonKernel<TContext> &
+    Record<string, Function>;
 }
 
 export type { JsonKernel };

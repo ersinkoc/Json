@@ -1,9 +1,9 @@
-import type { JsonKernel, JsonPlugin, PathSegment } from '../../types';
-import { isObject, isArray } from '../../utils';
-import { parsePath } from '../../utils/path-parser';
+import type { JsonKernel, JsonPlugin, PathSegment } from "../../types";
+import { isObject, isArray, deepClone } from "../../utils";
+import { parsePath } from "../../utils/path-parser";
 
 function deepFreeze<T>(obj: T): T {
-  if (obj === null || typeof obj !== 'object') {
+  if (obj === null || typeof obj !== "object") {
     return obj;
   }
 
@@ -23,7 +23,7 @@ function deepFreeze<T>(obj: T): T {
 }
 
 function isFrozen(obj: unknown): boolean {
-  if (obj === null || typeof obj !== 'object') {
+  if (obj === null || typeof obj !== "object") {
     return true;
   }
   return Object.isFrozen(obj);
@@ -32,15 +32,22 @@ function isFrozen(obj: unknown): boolean {
 function immutableSetByPath(
   value: unknown,
   segments: PathSegment[],
-  newValue: unknown
+  newValue: unknown,
 ): unknown {
   if (segments.length === 0) {
     return newValue;
   }
 
   const [segment, ...rest] = segments;
-  const isNumeric = typeof segment === 'number' || (typeof segment === 'string' && /^\d+$/.test(segment));
-  const index = typeof segment === 'number' ? segment : isNumeric ? parseInt(segment as string, 10) : -1;
+  const isNumeric =
+    typeof segment === "number" ||
+    (typeof segment === "string" && /^\d+$/.test(segment));
+  const index =
+    typeof segment === "number"
+      ? segment
+      : isNumeric
+        ? parseInt(segment as string, 10)
+        : -1;
 
   if (isNumeric && index >= 0) {
     if (!isArray(value)) {
@@ -66,7 +73,7 @@ function immutableSetByPath(
       (obj as Record<string, unknown>)[segment as string] = immutableSetByPath(
         (obj as Record<string, unknown>)[segment as string],
         rest,
-        newValue
+        newValue,
       );
     }
     return Object.freeze(obj);
@@ -75,7 +82,10 @@ function immutableSetByPath(
   return value;
 }
 
-function immutableRemoveByPath(value: unknown, segments: PathSegment[]): unknown {
+function immutableRemoveByPath(
+  value: unknown,
+  segments: PathSegment[],
+): unknown {
   if (segments.length === 0) {
     return undefined;
   }
@@ -84,7 +94,8 @@ function immutableRemoveByPath(value: unknown, segments: PathSegment[]): unknown
 
   if (rest.length === 0) {
     if (isArray(value)) {
-      const index = typeof segment === 'number' ? segment : parseInt(segment as string, 10);
+      const index =
+        typeof segment === "number" ? segment : parseInt(segment as string, 10);
       if (!isNaN(index) && index >= 0 && index < value.length) {
         const arr = [...value.slice(0, index), ...value.slice(index + 1)];
         return Object.freeze(arr);
@@ -102,7 +113,8 @@ function immutableRemoveByPath(value: unknown, segments: PathSegment[]): unknown
   }
 
   if (isArray(value)) {
-    const index = typeof segment === 'number' ? segment : parseInt(segment as string, 10);
+    const index =
+      typeof segment === "number" ? segment : parseInt(segment as string, 10);
     if (!isNaN(index) && index >= 0 && index < value.length) {
       const arr = [...value];
       arr[index] = immutableRemoveByPath(arr[index], rest);
@@ -113,28 +125,11 @@ function immutableRemoveByPath(value: unknown, segments: PathSegment[]): unknown
 
   if (isObject(value)) {
     const result = { ...value };
-    result[segment as string] = immutableRemoveByPath(result[segment as string], rest);
+    result[segment as string] = immutableRemoveByPath(
+      result[segment as string],
+      rest,
+    );
     return Object.freeze(result);
-  }
-
-  return value;
-}
-
-function deepClone<T>(value: T): T {
-  if (value === null || typeof value !== 'object') {
-    return value;
-  }
-
-  if (isArray(value)) {
-    return value.map((item) => deepClone(item)) as T;
-  }
-
-  if (isObject(value)) {
-    const result: Record<string, unknown> = {};
-    for (const key of Object.keys(value)) {
-      result[key] = deepClone(value[key]);
-    }
-    return result as T;
   }
 
   return value;
@@ -142,29 +137,35 @@ function deepClone<T>(value: T): T {
 
 export function createImmutablePlugin(): JsonPlugin {
   return {
-    name: 'immutable',
-    version: '1.0.0',
+    name: "immutable",
+    version: "1.0.0",
 
     install(kernel: JsonKernel) {
-      kernel.register('freeze', <T>(obj: T): T => {
+      kernel.register("freeze", <T>(obj: T): T => {
         return deepFreeze(obj);
       });
 
-      kernel.register('immutableSet', (obj: unknown, path: string, value: unknown): unknown => {
-        const segments = parsePath(path);
-        return immutableSetByPath(obj, segments, value);
-      });
+      kernel.register(
+        "immutableSet",
+        (obj: unknown, path: string, value: unknown): unknown => {
+          const segments = parsePath(path);
+          return immutableSetByPath(obj, segments, value);
+        },
+      );
 
-      kernel.register('immutableRemove', (obj: unknown, path: string): unknown => {
-        const segments = parsePath(path);
-        return immutableRemoveByPath(obj, segments);
-      });
+      kernel.register(
+        "immutableRemove",
+        (obj: unknown, path: string): unknown => {
+          const segments = parsePath(path);
+          return immutableRemoveByPath(obj, segments);
+        },
+      );
 
-      kernel.register('clone', <T>(obj: T): T => {
+      kernel.register("clone", <T>(obj: T): T => {
         return deepClone(obj);
       });
 
-      kernel.register('isFrozen', (obj: unknown): boolean => {
+      kernel.register("isFrozen", (obj: unknown): boolean => {
         return isFrozen(obj);
       });
     },
