@@ -176,10 +176,14 @@ function filterObjectValues(
   fn: (value: unknown, key: string) => boolean
 ): unknown {
   if (isArray(obj)) {
-    return obj
-      .filter((item) => filterObjectValues(item, fn) !== undefined)
-      .map((item) => filterObjectValues(item, fn))
-      .filter((v) => v !== undefined);
+    const result: unknown[] = [];
+    for (let i = 0; i < obj.length; i++) {
+      const filtered = filterObjectValues(obj[i], fn);
+      if (filtered !== undefined) {
+        result.push(filtered);
+      }
+    }
+    return result.length > 0 ? result : undefined;
   }
 
   if (isObject(obj)) {
@@ -222,17 +226,17 @@ export function createTransformPlugin(): JsonPlugin {
        */
       kernel.register('merge', (...args: unknown[]): unknown => {
         const options = args[args.length - 1] as MergeOptions;
-        const objects = (isObject(options) && !isArray(options) && 
+        const objects = (isObject(options) && !isArray(options) &&
           ('deep' in options || 'arrayMerge' in options))
           ? args.slice(0, -1)
           : args;
-        
+
         let result: unknown = {};
         for (const obj of objects) {
           result = deepMerge(result, obj, options);
         }
         return result;
-      });
+      }, 'transform');
 
       /** @example
        * ```ts
@@ -249,7 +253,7 @@ export function createTransformPlugin(): JsonPlugin {
        */
       kernel.register('flatten', (obj: unknown, options?: FlattenOptions): Record<string, unknown> => {
         return flattenObject(obj, options);
-      });
+      }, 'transform');
 
       /** @example
        * ```ts
@@ -266,7 +270,7 @@ export function createTransformPlugin(): JsonPlugin {
        */
       kernel.register('unflatten', (obj: Record<string, unknown>, separator?: string): unknown => {
         return unflattenObject(obj, separator);
-      });
+      }, 'transform');
 
       /** @example
        * ```ts
@@ -284,7 +288,7 @@ export function createTransformPlugin(): JsonPlugin {
        */
       kernel.register('pick', (obj: unknown, keys: string[] | string): unknown => {
         return pickKeys(obj, keys);
-      });
+      }, 'transform');
 
       /** @example
        * ```ts
@@ -302,7 +306,7 @@ export function createTransformPlugin(): JsonPlugin {
        */
       kernel.register('omit', (obj: unknown, keys: string[] | string): unknown => {
         return omitKeys(obj, keys);
-      });
+      }, 'transform');
 
       /** @example
        * ```ts
@@ -319,7 +323,7 @@ export function createTransformPlugin(): JsonPlugin {
        */
       kernel.register('sortKeys', (obj: unknown): unknown => {
         return sortObjectKeys(obj);
-      });
+      }, 'transform');
 
       /** @example
        * ```ts
@@ -337,7 +341,7 @@ export function createTransformPlugin(): JsonPlugin {
        */
       kernel.register('mapValues', (obj: unknown, fn: (value: unknown, key: string) => unknown): unknown => {
         return mapObjectValues(obj, fn);
-      });
+      }, 'transform');
 
       /** @example
        * ```ts
@@ -355,7 +359,7 @@ export function createTransformPlugin(): JsonPlugin {
        */
       kernel.register('filterValues', (obj: unknown, fn: (value: unknown, key: string) => boolean): unknown => {
         return filterObjectValues(obj, fn);
-      });
+      }, 'transform');
     },
   };
 }

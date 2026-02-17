@@ -51,9 +51,17 @@ export function isSafeInteger(value: unknown): value is number {
 export function isJsonValue(value: unknown): boolean {
   if (isNull(value) || isString(value) || isBoolean(value)) return true;
   if (isNumber(value)) return Number.isFinite(value);
-  if (isArray(value)) return value.every(isJsonValue);
+  if (isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      if (!isJsonValue(value[i])) return false;
+    }
+    return true;
+  }
   if (isPlainObject(value)) {
-    return Object.values(value).every(isJsonValue);
+    for (const key of Object.keys(value)) {
+      if (!isJsonValue(value[key])) return false;
+    }
+    return true;
   }
   return false;
 }

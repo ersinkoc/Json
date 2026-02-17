@@ -336,7 +336,7 @@ export function createPathPlugin(): JsonPlugin {
         const tokens = tokenize(expression);
         const results = evaluate(data, tokens, 0);
         return results;
-      });
+      }, 'path');
     },
   };
 }

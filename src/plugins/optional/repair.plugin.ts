@@ -298,7 +298,7 @@ export function createRepairPlugin(): JsonPlugin {
         result = fixUnquotedValues(result);
 
         return result;
-      });
+      }, 'repair');
     },
   };
 }

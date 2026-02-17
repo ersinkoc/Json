@@ -5,6 +5,7 @@ import type {
   JsonValue,
 } from "../../types";
 import { isObject, isArray } from "../../utils";
+import { deepClone } from "../../utils/deep-clone";
 
 function getValueByPointer(data: unknown, pointer: string): unknown {
   if (pointer === "" || pointer === "/") return data;
@@ -49,7 +50,7 @@ function setValueByPointer(
     .split("/")
     .slice(1)
     .map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"));
-  const cloned = JSON.parse(JSON.stringify(data));
+  const cloned = deepClone(data);
   let current: unknown = cloned;
 
   for (let i = 0; i < segments.length - 1; i++) {
@@ -86,7 +87,7 @@ function removeValueByPointer(data: unknown, pointer: string): unknown {
     .split("/")
     .slice(1)
     .map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"));
-  const cloned = JSON.parse(JSON.stringify(data));
+  const cloned = deepClone(data);
   let current: unknown = cloned;
 
   for (let i = 0; i < segments.length - 1; i++) {
@@ -235,6 +236,7 @@ export function createDiffPlugin(): JsonPlugin {
         (before: unknown, after: unknown): JsonPatchOperation[] => {
           return generateDiff(before, after);
         },
+        'diff',
       );
     },
   };
@@ -348,6 +350,7 @@ export function createPatchPlugin(): JsonPlugin {
 
           return result;
         },
+        'patch',
       );
 
       /** @example
@@ -409,6 +412,7 @@ export function createPatchPlugin(): JsonPlugin {
             ? { valid: true }
             : { valid: false, errors };
         },
+        'patch',
       );
 
       /** @example
@@ -479,6 +483,7 @@ export function createPatchPlugin(): JsonPlugin {
 
           return reversed;
         },
+        'patch',
       );
     },
   };

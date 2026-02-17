@@ -3,79 +3,87 @@ import type { PathSegment } from '../types';
 
 export function parsePath(path: string): PathSegment[] {
   if (!path || path === '') return [];
-  
+
   const segments: PathSegment[] = [];
   let i = 0;
-  
-  while (i < path.length) {
+  const len = path.length;
+
+  while (i < len) {
     const char = path[i];
-    
+
     if (char === '.') {
       i++;
-      if (i >= path.length) break;
-      
+      if (i >= len) break;
+
       if (path[i] === '.') {
         i++;
         segments.push('..');
         continue;
       }
-      
-      let identifier = '';
-      while (i < path.length && path[i] !== '.' && path[i] !== '[') {
-        identifier += path[i];
+
+      const chars: string[] = [];
+      while (i < len && path[i] !== '.' && path[i] !== '[') {
+        const c = path[i];
+        if (c) chars.push(c);
         i++;
       }
+      const identifier = chars.join('');
       if (identifier) {
         segments.push(identifier);
       }
     } else if (char === '[') {
       i++;
-      if (i >= path.length) {
+      if (i >= len) {
         throw new JsonPathError('Unexpected end of path in bracket notation', { path });
       }
-      
-      if (path[i] === '"' || path[i] === "'") {
-        const quote = path[i];
+
+      const bracketChar = path[i];
+      if (bracketChar === '"' || bracketChar === "'") {
+        const quote = bracketChar;
         i++;
-        let str = '';
-        
-        while (i < path.length && path[i] !== quote) {
-          if (path[i] === '\\' && i + 1 < path.length) {
-            str += path[i + 1];
+        const chars: string[] = [];
+
+        while (i < len && path[i] !== quote) {
+          if (path[i] === '\\' && i + 1 < len) {
+            const nextChar = path[i + 1];
+            if (nextChar) chars.push(nextChar);
             i += 2;
           } else {
-            str += path[i];
+            const c = path[i];
+            if (c) chars.push(c);
             i++;
           }
         }
-        
-        if (i >= path.length || path[i] !== quote) {
+
+        if (i >= len || path[i] !== quote) {
           throw new JsonPathError('Unterminated string in path', { path });
         }
         i++;
-        
-        if (i >= path.length || path[i] !== ']') {
+
+        if (i >= len || path[i] !== ']') {
           throw new JsonPathError('Expected closing bracket', { path });
         }
         i++;
-        
-        segments.push(str);
-      } else if (path[i] === '*' && i + 1 < path.length && path[i + 1] === ']') {
+
+        segments.push(chars.join(''));
+      } else if (bracketChar === '*' && i + 1 < len && path[i + 1] === ']') {
         i += 2;
         segments.push('*');
       } else {
-        let numStr = '';
-        
-        while (i < path.length && path[i] !== ']') {
-          numStr += path[i];
+        const chars: string[] = [];
+
+        while (i < len && path[i] !== ']') {
+          const c = path[i];
+          if (c) chars.push(c);
           i++;
         }
-        
-        if (i >= path.length) {
+
+        if (i >= len) {
           throw new JsonPathError('Unterminated bracket notation', { path });
         }
         i++;
-        
+
+        const numStr = chars.join('');
         const num = parseInt(numStr, 10);
         if (isNaN(num)) {
           segments.push(numStr);
@@ -84,41 +92,46 @@ export function parsePath(path: string): PathSegment[] {
         }
       }
     } else {
-      let identifier = '';
-      while (i < path.length && path[i] !== '.' && path[i] !== '[') {
-        identifier += path[i];
+      const chars: string[] = [];
+      while (i < len && path[i] !== '.' && path[i] !== '[') {
+        const c = path[i];
+        if (c) chars.push(c);
         i++;
       }
+      const identifier = chars.join('');
       if (identifier) {
         segments.push(identifier);
       }
     }
   }
-  
+
   return segments;
 }
 
+const SAFE_IDENTIFIER_REGEX = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
+const ESCAPE_QUOTE_REGEX = /"/g;
+
 export function stringifyPath(segments: PathSegment[]): string {
   if (segments.length === 0) return '';
-  
-  let result = '';
-  
+
+  const parts: string[] = [];
+
   for (const segment of segments) {
     if (segment === '..') {
-      result += '..';
+      parts.push('..');
     } else if (typeof segment === 'number') {
-      result += `[${segment}]`;
+      parts.push(`[${segment}]`);
     } else if (typeof segment === 'string') {
-      if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(segment)) {
-        if (result) result += '.';
-        result += segment;
+      if (SAFE_IDENTIFIER_REGEX.test(segment)) {
+        if (parts.length > 0) parts.push('.');
+        parts.push(segment);
       } else {
-        result += `["${segment.replace(/"/g, '\\"')}"]`;
+        parts.push(`["${segment.replace(ESCAPE_QUOTE_REGEX, '\\"')}"]`);
       }
     }
   }
-  
-  return result;
+
+  return parts.join('');
 }
 
 export function joinPath(...segments: PathSegment[]): string {

@@ -43,6 +43,7 @@ export class JsonKernelImpl<TContext = unknown>
 {
   private plugins: Map<string, JsonPlugin<TContext>> = new Map();
   public methods: Map<string, Function> = new Map();
+  private methodOwners: Map<string, string> = new Map(); // Maps method name to plugin name
   private config: JsonConfig;
   private context: TContext;
   private initialized = false;
@@ -122,12 +123,12 @@ export class JsonKernelImpl<TContext = unknown>
       this.plugins.delete(name);
       this.emit("plugin:unloaded", { name });
 
-      // Remove all methods registered by this plugin
-      // The plugin's install method registers methods, but we don't track which ones
-      // So we need to clear methods that were added by this plugin
-      // For now, we'll clear all methods and let the user reload plugins
-      // This is a simple approach - a better one would track method ownership
+      // Clear all methods before reinstalling remaining plugins
+      // This ensures clean state and proper re-registration
       this.methods.clear();
+      this.methodOwners.clear();
+
+      // Reinstall remaining plugins to re-register their methods
       for (const p of this.plugins.values()) {
         try {
           p.install(this);
@@ -157,12 +158,16 @@ export class JsonKernelImpl<TContext = unknown>
    * json.call('customMethod', 1, 2); // 3
    * ```
    */
-  register(name: string, method: Function): void {
+  register(name: string, method: Function, pluginName?: string): void {
     this.methods.set(name, method);
+    if (pluginName) {
+      this.methodOwners.set(name, pluginName);
+    }
   }
 
   unregister(name: string): void {
     this.methods.delete(name);
+    this.methodOwners.delete(name);
   }
 
   has(name: string): boolean {

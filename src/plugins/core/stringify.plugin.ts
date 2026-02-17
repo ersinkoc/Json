@@ -272,7 +272,7 @@ export function createStringifyPlugin(): JsonPlugin {
       kernel.register('stringify', (value: unknown, options?: StringifyOptions): string => {
         const stringifier = new Stringifier(options ?? {});
         return stringifier.stringify(value);
-      });
+      }, 'stringify');
     },
   };
 }

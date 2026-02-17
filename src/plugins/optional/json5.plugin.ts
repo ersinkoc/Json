@@ -423,7 +423,7 @@ export function createJson5Plugin(): JsonPlugin {
        */
       kernel.register('parse5', (text: string): unknown => {
         return parser.parse(text);
-      });
+      }, 'json5');
 
       /** @example
        * ```ts
@@ -441,7 +441,7 @@ export function createJson5Plugin(): JsonPlugin {
        */
       kernel.register('stringify5', (value: unknown, options?: Json5Options): string => {
         return stringifyJson5(value, options);
-      });
+      }, 'json5');
     },
   };
 }

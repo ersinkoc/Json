@@ -124,7 +124,7 @@ export interface JsonPlugin<TContext = unknown> {
 
 export interface JsonKernel<TContext = unknown> {
   use(...plugins: JsonPlugin<TContext>[]): void;
-  register(name: string, method: Function): void;
+  register(name: string, method: Function, pluginName?: string): void;
   unregister(name: string): void;
   has(name: string): boolean;
   get<T extends Function>(name: string): T | undefined;

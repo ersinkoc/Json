@@ -242,7 +242,7 @@ export function createStreamPlugin(): JsonPlugin {
         stringifyLines: stringifyJsonlToStream,
       };
 
-      kernel.register('stream', streamApi as unknown as Function);
+      kernel.register('stream', streamApi as unknown as Function, 'stream');
     },
   };
 }

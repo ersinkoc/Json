@@ -397,6 +397,7 @@ export function createParsePlugin(): JsonPlugin {
 
           return result;
         },
+        'parse',
       );
 
       /** @example
@@ -445,6 +446,7 @@ export function createParsePlugin(): JsonPlugin {
             return { ok: false, error };
           }
         },
+        'parse',
       );
     },
   };

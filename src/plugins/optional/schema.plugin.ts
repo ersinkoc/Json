@@ -472,7 +472,7 @@ export function createSchemaPlugin(): JsonPlugin {
           valid: errors.length === 0,
           errors,
         };
-      });
+      }, 'schema');
 
       /** @example
        * ```ts
@@ -499,7 +499,7 @@ export function createSchemaPlugin(): JsonPlugin {
             errors,
           };
         };
-      });
+      }, 'schema');
 
       /** @example
        * ```ts
@@ -530,7 +530,7 @@ export function createSchemaPlugin(): JsonPlugin {
       kernel.register('is', <T>(data: unknown, schema: JsonSchema): data is T => {
         const errors = validateAgainstSchema(data, schema);
         return errors.length === 0;
-      });
+      }, 'schema');
     },
   };
 }

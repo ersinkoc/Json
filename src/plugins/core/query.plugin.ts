@@ -3,6 +3,28 @@ import { parsePath } from '../../utils/path-parser';
 import { deepClone } from '../../utils/deep-clone';
 import { isObject, isArray, isUndefined } from '../../utils/type-checks';
 
+// Cached regex for numeric string detection
+const NUMERIC_REGEX = /^\d+$/;
+// Cached regex for safe identifier detection
+const SAFE_IDENTIFIER_REGEX = /[a-zA-Z_$][a-zA-Z0-9_$]*/;
+
+// Path segment cache to avoid re-parsing the same paths
+const pathCache = new Map<string, PathSegment[]>();
+
+function getCachedSegments(path: string): PathSegment[] {
+  let segments = pathCache.get(path);
+  if (!segments) {
+    segments = parsePath(path);
+    // Limit cache size to prevent memory issues
+    if (pathCache.size > 1000) {
+      const firstKey = pathCache.keys().next().value;
+      if (firstKey) pathCache.delete(firstKey);
+    }
+    pathCache.set(path, segments);
+  }
+  return segments;
+}
+
 function getByPath(value: unknown, segments: PathSegment[]): unknown {
   let current = value;
 
@@ -12,7 +34,7 @@ function getByPath(value: unknown, segments: PathSegment[]): unknown {
     }
 
     if (isArray(current)) {
-      if (typeof segment === 'number' || (typeof segment === 'string' && /^\d+$/.test(segment))) {
+      if (typeof segment === 'number' || (typeof segment === 'string' && NUMERIC_REGEX.test(segment))) {
         const index = typeof segment === 'number' ? segment : parseInt(segment, 10);
         current = current[index];
       } else {
@@ -34,14 +56,14 @@ function setByPath(value: unknown, segments: PathSegment[], newValue: unknown): 
   }
 
   const cloned = deepClone(value);
-  
+
   function setRecursive(current: unknown, segs: PathSegment[]): unknown {
     if (segs.length === 0) {
       return newValue;
     }
 
     const [segment, ...rest] = segs;
-    const isNumeric = typeof segment === 'number' || (typeof segment === 'string' && /^\d+$/.test(segment));
+    const isNumeric = typeof segment === 'number' || (typeof segment === 'string' && NUMERIC_REGEX.test(segment));
     const index = typeof segment === 'number' ? segment : isNumeric ? parseInt(segment as string, 10) : -1;
 
     if (isNumeric && index >= 0) {
@@ -82,7 +104,7 @@ function hasByPath(value: unknown, segments: PathSegment[]): boolean {
     }
 
     if (isArray(current)) {
-      if (typeof segment === 'number' || (typeof segment === 'string' && /^\d+$/.test(segment))) {
+      if (typeof segment === 'number' || (typeof segment === 'string' && NUMERIC_REGEX.test(segment))) {
         const index = typeof segment === 'number' ? segment : parseInt(segment, 10);
         if (index < 0 || index >= current.length) {
           return false;
@@ -172,7 +194,7 @@ function collectPaths(value: unknown, prefix: string = ''): string[] {
     }
   } else if (isObject(value)) {
     for (const key of Object.keys(value)) {
-      const path = prefix ? (/[a-zA-Z_$][a-zA-Z0-9_$]*/.test(key) ? `${prefix}.${key}` : `${prefix}["${key}"]`) : key;
+      const path = prefix ? (SAFE_IDENTIFIER_REGEX.test(key) ? `${prefix}.${key}` : `${prefix}["${key}"]`) : key;
       paths.push(...collectPaths(value[key], path));
     }
   }
@@ -204,10 +226,10 @@ export function createQueryPlugin(): JsonPlugin {
        * ```
        */
       kernel.register('get', (obj: unknown, path: string, fallback?: unknown): unknown => {
-        const segments = parsePath(path);
+        const segments = getCachedSegments(path);
         const result = getByPath(obj, segments);
         return isUndefined(result) ? fallback : result;
-      });
+      }, 'query');
 
       /** @example
        * ```ts
@@ -227,9 +249,9 @@ export function createQueryPlugin(): JsonPlugin {
        * ```
        */
       kernel.register('set', (obj: unknown, path: string, value: unknown): unknown => {
-        const segments = parsePath(path);
+        const segments = getCachedSegments(path);
         return setByPath(obj, segments, value);
-      });
+      }, 'query');
 
       /** @example
        * ```ts
@@ -246,9 +268,9 @@ export function createQueryPlugin(): JsonPlugin {
        * ```
        */
       kernel.register('has', (obj: unknown, path: string): boolean => {
-        const segments = parsePath(path);
+        const segments = getCachedSegments(path);
         return hasByPath(obj, segments);
-      });
+      }, 'query');
 
       /** @example
        * ```ts
@@ -262,9 +284,9 @@ export function createQueryPlugin(): JsonPlugin {
        * ```
        */
       kernel.register('remove', (obj: unknown, path: string): unknown => {
-        const segments = parsePath(path);
+        const segments = getCachedSegments(path);
         return removeByPath(obj, segments);
-      });
+      }, 'query');
 
       /** @example
        * ```ts

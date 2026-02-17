@@ -143,7 +143,7 @@ export function createImmutablePlugin(): JsonPlugin {
     install(kernel: JsonKernel) {
       kernel.register("freeze", <T>(obj: T): T => {
         return deepFreeze(obj);
-      });
+      }, 'immutable');
 
       kernel.register(
         "immutableSet",
@@ -151,6 +151,7 @@ export function createImmutablePlugin(): JsonPlugin {
           const segments = parsePath(path);
           return immutableSetByPath(obj, segments, value);
         },
+        'immutable',
       );
 
       kernel.register(
@@ -159,15 +160,16 @@ export function createImmutablePlugin(): JsonPlugin {
           const segments = parsePath(path);
           return immutableRemoveByPath(obj, segments);
         },
+        'immutable',
       );
 
       kernel.register("clone", <T>(obj: T): T => {
         return deepClone(obj);
-      });
+      }, 'immutable');
 
       kernel.register("isFrozen", (obj: unknown): boolean => {
         return isFrozen(obj);
-      });
+      }, 'immutable');
     },
   };
 }

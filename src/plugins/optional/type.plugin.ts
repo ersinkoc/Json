@@ -176,15 +176,15 @@ export function createTypePlugin(): JsonPlugin {
        */
       kernel.register('infer', (data: unknown | unknown[], options?: InferOptions): string => {
         const name = options?.name ?? 'Root';
-        
+
         const typeInfo = inferType(data);
 
         if (typeInfo.type === 'array' || typeInfo.type === 'object') {
           return typeToString(typeInfo, name, options);
         }
-        
+
         return typeToString(typeInfo, name, options);
-      });
+      }, 'type');
     },
   };
 }
