@@ -4,7 +4,12 @@
     <meta charset="UTF-8" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <!-- Preload critical font weights for faster FCP -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    </noscript>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="@oxog/json - The most advanced TypeScript JSON toolkit. Type-safe parsing, validation, querying, and transformation with zero dependencies." />
@@ -14,14 +19,13 @@
     <meta property="og:url" content="https://oxog.github.io/json/" />
     <meta property="og:title" content="@oxog/json - Advanced TypeScript JSON Toolkit" />
     <meta property="og:description" content="Type-safe parsing, validation, querying, and transformation. Zero dependencies. 100% TypeScript." />
-    <meta property="og:image" content="https://oxog.github.io/json/og-image.png" />
+    <!-- Note: og-image.png should be added to public folder -->
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content="https://oxog.github.io/json/" />
     <meta name="twitter:title" content="@oxog/json - Advanced TypeScript JSON Toolkit" />
     <meta name="twitter:description" content="Type-safe parsing, validation, querying, and transformation. Zero dependencies. 100% TypeScript." />
-    <meta name="twitter:image" content="https://oxog.github.io/json/og-image.png" />
 
     <title>@oxog/json — Advanced TypeScript JSON Toolkit</title>
     <style>
