@@ -7,13 +7,32 @@ import type {
 import { isObject, isArray } from "../../utils";
 import { deepClone } from "../../utils/deep-clone";
 
+// Cache for parsed JSON Pointers
+const pointerCache = new Map<string, string[]>();
+
+function parsePointer(pointer: string): string[] {
+  if (pointer === "" || pointer === "/") return [];
+
+  let segments = pointerCache.get(pointer);
+  if (!segments) {
+    segments = pointer
+      .split("/")
+      .slice(1)
+      .map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"));
+    // Limit cache size
+    if (pointerCache.size > 1000) {
+      const firstKey = pointerCache.keys().next().value;
+      if (firstKey) pointerCache.delete(firstKey);
+    }
+    pointerCache.set(pointer, segments);
+  }
+  return segments;
+}
+
 function getValueByPointer(data: unknown, pointer: string): unknown {
   if (pointer === "" || pointer === "/") return data;
 
-  const segments = pointer
-    .split("/")
-    .slice(1)
-    .map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"));
+  const segments = parsePointer(pointer);
   let current = data;
 
   for (const segment of segments) {
@@ -46,10 +65,7 @@ function setValueByPointer(
     return value;
   }
 
-  const segments = pointer
-    .split("/")
-    .slice(1)
-    .map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"));
+  const segments = parsePointer(pointer);
   const cloned = deepClone(data);
   let current: unknown = cloned;
 
@@ -83,10 +99,7 @@ function removeValueByPointer(data: unknown, pointer: string): unknown {
     return undefined;
   }
 
-  const segments = pointer
-    .split("/")
-    .slice(1)
-    .map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"));
+  const segments = parsePointer(pointer);
   const cloned = deepClone(data);
   let current: unknown = cloned;
 

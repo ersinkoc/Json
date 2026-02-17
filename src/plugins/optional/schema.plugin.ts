@@ -1,6 +1,18 @@
 import type { JsonKernel, JsonPlugin, JsonSchema, ValidationResult, ValidationError } from '../../types';
 import { isObject, isArray, isString, isNumber, isBoolean, isNull } from '../../utils';
 
+// Cache for compiled regex patterns
+const regexCache = new Map<string, RegExp>();
+
+function getRegex(pattern: string): RegExp {
+  let regex = regexCache.get(pattern);
+  if (!regex) {
+    regex = new RegExp(pattern);
+    regexCache.set(pattern, regex);
+  }
+  return regex;
+}
+
 const formatValidators: Record<string, (value: string) => boolean> = {
   email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
   uri: (value) => {
@@ -136,7 +148,7 @@ function validateAgainstSchema(
     }
 
     if (schema.pattern !== undefined) {
-      const regex = new RegExp(schema.pattern);
+      const regex = getRegex(schema.pattern);
       if (!regex.test(data)) {
         errors.push({
           path,
@@ -324,7 +336,7 @@ function validateAgainstSchema(
 
       for (const key of Object.keys(data)) {
         const isProp = propKeys.includes(key);
-        const isPattern = patternKeys.some(p => new RegExp(p).test(key));
+        const isPattern = patternKeys.some(p => getRegex(p).test(key));
 
         // Check if this key is NOT in properties and NOT in patternProperties
         if (!isProp && !isPattern) {
@@ -345,7 +357,7 @@ function validateAgainstSchema(
     if (schema.patternProperties !== undefined) {
       for (const key of Object.keys(data)) {
         for (const [pattern, patternSchema] of Object.entries(schema.patternProperties)) {
-          if (new RegExp(pattern).test(key)) {
+          if (getRegex(pattern).test(key)) {
             errors.push(...validateAgainstSchema(data[key], patternSchema, `${path}/${key}`));
           }
         }

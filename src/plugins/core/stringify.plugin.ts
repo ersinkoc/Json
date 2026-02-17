@@ -30,8 +30,8 @@ class Stringifier {
       value = this.replacer(key, value);
     }
 
-    if (value === null) return 'null';
-    if (value === undefined) return 'null';
+    // Combine null and undefined checks
+    if (value === null || value === undefined) return 'null';
 
     switch (typeof value) {
       case 'string':
@@ -51,29 +51,29 @@ class Stringifier {
   }
 
   private stringifyString(str: string): string {
-    let result = '"';
+    const chars: string[] = ['"'];
     for (let i = 0; i < str.length; i++) {
       const ch = str[i];
       const code = str.charCodeAt(i);
 
       switch (ch) {
-        case '"': result += '\\"'; break;
-        case '\\': result += '\\\\'; break;
-        case '\b': result += '\\b'; break;
-        case '\f': result += '\\f'; break;
-        case '\n': result += '\\n'; break;
-        case '\r': result += '\\r'; break;
-        case '\t': result += '\\t'; break;
+        case '"': chars.push('\\"'); break;
+        case '\\': chars.push('\\\\'); break;
+        case '\b': chars.push('\\b'); break;
+        case '\f': chars.push('\\f'); break;
+        case '\n': chars.push('\\n'); break;
+        case '\r': chars.push('\\r'); break;
+        case '\t': chars.push('\\t'); break;
         default:
           if (code < 0x20) {
-            result += `\\u${code.toString(16).padStart(4, '0')}`;
-          } else {
-            result += ch;
+            chars.push(`\\u${code.toString(16).padStart(4, '0')}`);
+          } else if (ch) {
+            chars.push(ch);
           }
       }
     }
-    result += '"';
-    return result;
+    chars.push('"');
+    return chars.join('');
   }
 
   private checkCircular(obj: object): string | null {
