@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CodeBlock } from '@oxog/codeshine/react'
+import { LazyCodeBlock } from '@/components/LazyCodeBlock'
 import { ChevronRight, BookOpen, Puzzle, Box, AlertTriangle, Rocket } from 'lucide-react'
 
 const THEME = 'tokyo-night'
@@ -63,10 +63,10 @@ export default function Docs() {
             <p className="text-zinc-400 mb-8 leading-relaxed text-base">
               Install the package and start using it in your project. Zero dependencies, works everywhere.
             </p>
-            <CodeBlock code="npm install @oxog/json" language="bash" theme={THEME} copyButton />
+            <LazyCodeBlock code="npm install @oxog/json" language="bash" theme={THEME} copyButton />
 
             <div className="mt-8">
-              <CodeBlock
+              <LazyCodeBlock
                 code={`import { json } from '@oxog/json';
 
 const data = json.parse('{"hello": "world"}');
@@ -87,7 +87,7 @@ console.log(data); // { hello: "world" }`}
             <p className="text-zinc-400 mb-8 leading-relaxed text-base">
               Parse and stringify JSON with enhanced options like depth limits and circular reference handling.
             </p>
-            <CodeBlock
+            <LazyCodeBlock
               code={`import { json } from '@oxog/json';
 
 // Parse with options
@@ -120,7 +120,7 @@ json.stringify(value, {
             <p className="text-zinc-400 mb-8 leading-relaxed text-base">
               Access deeply nested properties with dot-notation paths. Safe and type-aware.
             </p>
-            <CodeBlock
+            <LazyCodeBlock
               code={`import { json } from '@oxog/json';
 
 const data = {
@@ -152,7 +152,7 @@ json.paths(data);
             <p className="text-zinc-400 mb-8 leading-relaxed text-base">
               Extend functionality with tree-shakable plugins. Each plugin adds new methods to the json instance.
             </p>
-            <CodeBlock
+            <LazyCodeBlock
               code={`import { json } from '@oxog/json';
 import {
   pathPlugin,       // JSONPath: json.query(data, '$.store.books[*].title')
@@ -189,7 +189,7 @@ const fixed = json.repair(brokenJson);`}
             <p className="text-zinc-400 mb-8 leading-relaxed text-base">
               Pre-configured plugin bundles for common use cases.
             </p>
-            <CodeBlock
+            <LazyCodeBlock
               code={`import { json } from '@oxog/json';
 import { preset } from '@oxog/json/plugins';
 
@@ -212,7 +212,7 @@ json.use(preset.validation);  // schema + type`}
             <p className="text-zinc-400 mb-8 leading-relaxed text-base">
               Create isolated json instances with custom default options.
             </p>
-            <CodeBlock
+            <LazyCodeBlock
               code={`import { createJson } from '@oxog/json';
 
 const j = createJson({

@@ -13,8 +13,17 @@ function getRegex(pattern: string): RegExp {
   return regex;
 }
 
+// Pre-compiled regex patterns for format validators (performance optimization)
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+const DATETIME_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const HOSTNAME_REGEX = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+const IPV4_REGEX = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+const IPV6_SEGMENT_REGEX = /^[0-9a-fA-F]{1,4}$/;
+
 const formatValidators: Record<string, (value: string) => boolean> = {
-  email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+  email: (value) => EMAIL_REGEX.test(value),
   uri: (value) => {
     try {
       new URL(value);
@@ -23,13 +32,9 @@ const formatValidators: Record<string, (value: string) => boolean> = {
       return false;
     }
   },
-  date: (value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value)),
-  'date-time': (value) => {
-    // ISO 8601 date-time requires timezone (Z or ±hh:mm)
-    const regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
-    return regex.test(value) && !isNaN(Date.parse(value));
-  },
-  uuid: (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value),
+  date: (value) => DATE_REGEX.test(value) && !isNaN(Date.parse(value)),
+  'date-time': (value) => DATETIME_REGEX.test(value) && !isNaN(Date.parse(value)),
+  uuid: (value) => UUID_REGEX.test(value),
   regex: (value) => {
     try {
       new RegExp(value);
@@ -38,8 +43,8 @@ const formatValidators: Record<string, (value: string) => boolean> = {
       return false;
     }
   },
-  hostname: (value) => /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(value) && value.length <= 253,
-  'ipv4': (value) => /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(value),
+  hostname: (value) => HOSTNAME_REGEX.test(value) && value.length <= 253,
+  'ipv4': (value) => IPV4_REGEX.test(value),
   'ipv6': (value) => {
     // Simplified IPv6 validation - supports :: shorthand
     // Check for obviously invalid patterns
@@ -53,7 +58,7 @@ const formatValidators: Record<string, (value: string) => boolean> = {
     // Check each part
     for (const part of parts) {
       if (part === '' || part === '::') continue;
-      if (!/^[0-9a-fA-F]{1,4}$/.test(part)) return false;
+      if (!IPV6_SEGMENT_REGEX.test(part)) return false;
     }
     return true;
   },

@@ -1,6 +1,6 @@
 {
   "name": "@oxog/json",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Zero-dependency JSON Swiss Army Knife — parse, query, transform, diff, validate, stream, and repair with micro-kernel plugin architecture",
   "type": "module",
   "main": "./dist/index.cjs",

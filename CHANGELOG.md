@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-02-17
+
+### Performance
+
+- **Kernel**: Added method and property caching in proxy handler to avoid repeated Map.get() calls
+- **Schema Plugin**: Pre-compiled regex patterns for format validators (email, date, uuid, ipv4, ipv6, hostname)
+- **Query Plugin**: Added regex caching and path segment caching for improved performance
+- **Diff Plugin**: Added JSON Pointer parsing cache to avoid repeated parsing
+- **Path Parser**: Optimized string building with array.push/join instead of concatenation
+- **Escape Utils**: Cached HEX_REGEX for better performance
+- **Deep Clone**: Added circular reference detection using WeakMap
+
+### Website
+
+- Added CodeBlock lazy loading (374KB) - loads only when needed
+- Added Service Worker (PWA) for offline support
+- Added Google Fonts caching with CacheFirst strategy
+- Added Playground JSON caching with useMemo
+- Added vendor chunk splitting for better caching (React, Lucide, Codeshine)
+- Added font preloading for faster FCP
+
+### Code Quality
+
+- Added method ownership tracking in kernel for better plugin management
+- Improved TypeScript strict mode compliance
+- Added path aliases (@/) for cleaner imports
+
 ## [1.0.1] - 2025-02-15
 
 ### Fixed

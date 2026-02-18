@@ -243,16 +243,38 @@ export function createJson<TContext = unknown>(
 ): JsonKernel<TContext> & Record<string, Function> {
   const kernel = new JsonKernelImpl<TContext>(config, context);
 
+  // Cache for method lookups to avoid repeated Map.get() calls
+  const methodCache = new Map<string, Function>();
+  const propertyCache = new Map<string, unknown>();
+
   const handler: ProxyHandler<JsonKernelImpl<TContext>> = {
     get(target, prop: string) {
+      // Check cache first
+      const cached = methodCache.get(prop);
+      if (cached) {
+        return cached;
+      }
+
       const method = target.methods.get(prop);
       if (method) {
+        methodCache.set(prop, method);
         return method;
       }
-      const value = target[prop as keyof JsonKernelImpl<TContext>];
-      if (typeof value === "function") {
-        return value.bind(target);
+
+      // Check property cache
+      const cachedProp = propertyCache.get(prop);
+      if (cachedProp !== undefined) {
+        return cachedProp;
       }
+
+      const value = target[prop as keyof JsonKernelImpl<TContext>];
+      if (typeof value === 'function') {
+        const bound = value.bind(target);
+        propertyCache.set(prop, bound);
+        return bound;
+      }
+
+      propertyCache.set(prop, value);
       return value;
     },
     has(target, prop: string) {

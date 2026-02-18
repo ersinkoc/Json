@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CodeBlock } from '@oxog/codeshine/react'
+import { LazyCodeBlock } from '@/components/LazyCodeBlock'
 import {
   Package,
   Zap,
@@ -248,7 +248,7 @@ function Examples() {
             ))}
           </div>
 
-          <CodeBlock
+          <LazyCodeBlock
             code={examples[tab].code}
             language="typescript"
             theme="tokyo-night"

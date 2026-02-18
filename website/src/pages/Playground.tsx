@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react'
-import { CodeBlock } from '@oxog/codeshine/react'
+import { useState, useCallback, useMemo } from 'react'
+import { LazyCodeBlock } from '@/components/LazyCodeBlock'
 import { Play, RotateCcw, Braces, AlignLeft, CheckCircle2, AlertCircle } from 'lucide-react'
 
 const THEME = 'tokyo-night'
@@ -26,33 +26,47 @@ export default function Playground() {
   const [error, setError] = useState('')
   const [activeAction, setActiveAction] = useState<Action | null>(null)
 
+  // Cache parsed JSON to avoid re-parsing for different actions
+  const parsedData = useMemo(() => {
+    if (!input.trim()) return null
+    try {
+      return JSON.parse(input)
+    } catch {
+      return null
+    }
+  }, [input])
+
   const run = useCallback((action: Action) => {
     setError('')
     setActiveAction(action)
+
+    // Use cached parsed data instead of parsing again
+    const parsed = parsedData
+
+    if (!parsed && action !== 'validate') {
+      setError('Invalid JSON - please fix input first')
+      setOutput('')
+      return
+    }
+
     try {
       switch (action) {
-        case 'parse': {
-          const parsed = JSON.parse(input)
-          setOutput(JSON.stringify(parsed, null, 2))
-          break
-        }
+        case 'parse':
         case 'format': {
-          const parsed = JSON.parse(input)
           setOutput(JSON.stringify(parsed, null, 2))
           break
         }
         case 'minify': {
-          const parsed = JSON.parse(input)
           setOutput(JSON.stringify(parsed))
           break
         }
         case 'validate': {
+          // Try to parse and return result
           JSON.parse(input)
           setOutput('{ "valid": true, "message": "Valid JSON" }')
           break
         }
         case 'paths': {
-          const parsed = JSON.parse(input)
           const paths: string[] = []
           const walk = (obj: unknown, prefix: string) => {
             if (obj && typeof obj === 'object') {
@@ -72,7 +86,7 @@ export default function Playground() {
       setError(e instanceof Error ? e.message : 'Unknown error')
       setOutput('')
     }
-  }, [input])
+  }, [input, parsedData])
 
   return (
     <div className="container-custom py-16 sm:py-20">
@@ -158,7 +172,7 @@ export default function Playground() {
               <p className="text-rose-400 text-sm font-mono">{error}</p>
             </div>
           ) : output ? (
-            <CodeBlock
+            <LazyCodeBlock
               code={output}
               language="json"
               theme={THEME}
